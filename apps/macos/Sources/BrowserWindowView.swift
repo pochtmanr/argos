@@ -1,12 +1,15 @@
 import SwiftUI
 import BrowserCore
 
-/// The browser window's root chrome: a `NavigationSplitView` with the vertical tab `SidebarView` on
-/// the left and, on the right, the address `ToolbarView` above the active tab's web view.
+/// The browser window's root chrome: a `NavigationSplitView` with the vertical tab `SidebarView`
+/// (plus the Spaces switcher) on the left and, on the right, the address `ToolbarView` above the
+/// active tab's web view.
+///
+/// `SpaceStore` is the single source of truth. The active space's `TabManager` is injected into the
+/// environment so the tab `SidebarView`/`TabRow`/detail pane keep operating on a plain `TabManager`,
+/// unaware of spaces — switching spaces just swaps which manager they see.
 struct BrowserWindowView: View {
-  /// Owned by `MacBrowserApp` and injected, so the app-level menu commands (⌘T/⌘W/cycle) and this
-  /// view operate on one shared instance.
-  @Environment(TabManager.self) private var manager
+  @Environment(SpaceStore.self) private var store
 
   /// Drives the sidebar show/hide toggle and keeps the window usable when collapsed.
   @State private var columnVisibility = NavigationSplitViewVisibility.all
@@ -14,7 +17,7 @@ struct BrowserWindowView: View {
   var body: some View {
     NavigationSplitView(columnVisibility: $columnVisibility) {
       SidebarView()
-        .navigationSplitViewColumnWidth(min: 180, ideal: 240, max: 360)
+        .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
     } detail: {
       detailPane
     }
@@ -33,30 +36,35 @@ struct BrowserWindowView: View {
         .help("Toggle Sidebar")
       }
     }
-    .onAppear {
-      // Seed the initial blank tab with the home page (the manager itself is URL-agnostic).
-      if manager.activeTab?.url == nil {
-        manager.activeTab?.load(homeURL)
-      }
-    }
+    // Scope the tab views to the active space's manager. Always non-nil given the never-empty
+    // invariant; re-injected when the active space changes so the sidebar/detail swap tab sets.
+    .environment(store.activeSpace?.tabManager)
   }
 
-  /// The detail pane: address toolbar atop the active tab's content. Every tab stays mounted in a
-  /// `ZStack`; only the active one is visible and interactive. Keeping all `WKWebView` instances
-  /// alive (rather than swapping a single `WebView`) means switching tabs never re-hosts or reloads a
-  /// page — page, scroll, and back/forward state are preserved.
+  /// The detail pane: address toolbar atop the active space's active tab content. Every tab in the
+  /// active space stays mounted in a `ZStack`; only the active one is visible and interactive.
+  /// Keeping the `WKWebView`s alive (rather than swapping a single `WebView`) means switching tabs
+  /// never re-hosts or reloads a page. Only the active space's tabs are mounted; inactive spaces'
+  /// web views stay alive in memory but leave the hierarchy until that space is reselected, so
+  /// switching back is instant with page/scroll/history intact (no suspension this prompt).
+  @ViewBuilder
   private var detailPane: some View {
-    VStack(spacing: 0) {
-      if let tab = manager.activeTab {
+    if let space = store.activeSpace, let tab = space.tabManager.activeTab {
+      VStack(spacing: 0) {
+        // `.id(tab.id)` gives the toolbar fresh @State (address text/focus) when the active tab
+        // identity changes — including across a space switch.
         ToolbarView(tab: tab)
-      }
+          .id(tab.id)
 
-      ZStack {
-        ForEach(manager.tabs) { tab in
-          WebView(tab: tab)
-            .opacity(tab.id == manager.activeTabID ? 1 : 0)
-            .allowsHitTesting(tab.id == manager.activeTabID)
+        ZStack {
+          ForEach(space.tabManager.tabs) { tab in
+            WebView(tab: tab)
+              .opacity(tab.id == space.tabManager.activeTabID ? 1 : 0)
+              .allowsHitTesting(tab.id == space.tabManager.activeTabID)
+          }
         }
+        // Make the per-space web-view container identity explicit across space switches.
+        .id(space.id)
       }
     }
   }
@@ -64,5 +72,5 @@ struct BrowserWindowView: View {
 
 #Preview {
   BrowserWindowView()
-    .environment(TabManager())
+    .environment(SpaceStore())
 }

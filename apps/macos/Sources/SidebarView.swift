@@ -1,21 +1,30 @@
 import SwiftUI
 import BrowserCore
 
-/// The left sidebar: a vertical `List` of the manager's tabs with native selection highlighting,
-/// drag-to-reorder, and a "new tab" button pinned to the bottom.
+/// The left sidebar: a vertical `List` of the active space's tabs (native selection highlighting,
+/// drag-to-reorder, "new tab" button), with the Spaces switcher pinned at the very bottom.
+///
+/// The tab list reads `@Environment(TabManager.self)` — `BrowserWindowView` injects the *active
+/// space's* manager, so this view stays space-unaware. The switcher reads `SpaceStore` itself.
 struct SidebarView: View {
   @Environment(TabManager.self) private var manager
 
   var body: some View {
-    List(selection: selection) {
-      ForEach(manager.tabs) { tab in
-        TabRow(tab: tab)
+    VStack(spacing: 0) {
+      List(selection: selection) {
+        ForEach(manager.tabs) { tab in
+          TabRow(tab: tab)
+        }
+        .onMove(perform: move)
       }
-      .onMove(perform: move)
-    }
-    // Keep the "new tab" button pinned below the scrolling list.
-    .safeAreaInset(edge: .bottom) {
-      newTabButton
+      // Keep the "new tab" button pinned below the scrolling list.
+      .safeAreaInset(edge: .bottom) {
+        newTabButton
+      }
+
+      Divider()
+
+      SpacesSwitcherView()
     }
   }
 
@@ -53,9 +62,9 @@ struct SidebarView: View {
 }
 
 #Preview {
-  let manager = TabManager()
-  manager.newTab(url: homeURL)
-  manager.newTab(url: URL(string: "https://www.swift.org")!)
+  let store = SpaceStore()
+  store.activeSpace?.tabManager.newTab(url: URL(string: "https://www.swift.org")!)
   return SidebarView()
-    .environment(manager)
+    .environment(store)
+    .environment(store.activeSpace?.tabManager)
 }
