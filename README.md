@@ -1,28 +1,64 @@
-# AI-Native Multi-Profile Browser Platform
+<div align="center">
+  <img src="prompts/macos/ArgosLogo.png" alt="Argos" width="160" height="160" />
 
-Generated path: `/Users/roman/Developer/iosbrowser/README.md`
+  # Argos
 
-This monorepo is a production-grade foundation for a multi-profile browser platform:
+  **An AI-native, multi-profile browser.**
+</div>
 
-- Desktop: Electron, Chromium, React, TypeScript.
-- iOS: SwiftUI with `WKWebView`, respecting Apple's browser engine restrictions.
-- Backend: Fastify service layer backed by Supabase/PostgreSQL and Redis.
-- Shared packages: API contracts, profile isolation, proxy policy, AI providers, sync, security, vault, observability.
-- Infrastructure: Supabase migrations, Docker Compose, GitHub Actions, security and roadmap docs.
+---
 
-The implementation plan is desktop-first. See `/Users/roman/Developer/iosbrowser/docs/desktop-first-plan.md` and `/Users/roman/Developer/iosbrowser/prompts/desktop/desktop-first-execution.md`.
+Argos is a personal daily-driver browser built around three ideas: strong **profile isolation**,
+**permissioned AI** that acts through auditable intents, and **secrets that never sync in plaintext**.
+The repo is a production-grade monorepo spanning a native macOS app, an iOS app, an Electron desktop
+build, a backend service layer, and the shared engine that ties them together.
 
-## Architectural decisions
+## Platforms
 
-Profile isolation is modeled as a first-class domain boundary. Desktop uses Electron persistent partitions per profile, while iOS uses per-profile `WKWebsiteDataStore` and app-level metadata because iOS cannot run Chromium or reliably spoof engine fingerprints.
+| Surface | Stack | Status |
+| --- | --- | --- |
+| **macOS** (`apps/macos`) | Swift · SwiftUI · WebKit — Arc-style vertical tabs, Spaces, command bar | Primary, actively developed |
+| **iOS** (`apps/ios`) | SwiftUI · `WKWebView` (respects Apple's engine restrictions) | In progress |
+| **Desktop** (`apps/desktop`) | Electron · Chromium · React · TypeScript | In progress |
+| **Backend** (`apps/backend`) | Fastify · Supabase/PostgreSQL · Redis | In progress |
 
-AI capabilities are permissioned by workspace, profile, tab, and action type. Browser actions are represented as auditable intents so agents can be denied, previewed, approved, replayed, and synced safely.
+The reusable browser engine lives in [`packages/BrowserCore`](packages/BrowserCore) as a Swift package;
+the macOS and iOS targets only host the UI.
 
-Secrets are never synced in plaintext. Local vault entries are envelope-encrypted; sync stores encrypted payloads plus metadata needed for conflict resolution.
+## Architecture
 
-## Local workflow
+- **Profile isolation is a first-class domain boundary.** Desktop uses Electron persistent partitions
+  per profile; iOS uses per-profile `WKWebsiteDataStore` and app-level metadata, because iOS cannot run
+  Chromium or reliably spoof engine fingerprints.
+- **AI is permissioned by workspace, profile, tab, and action type.** Browser actions are modeled as
+  auditable intents, so agents can be denied, previewed, approved, replayed, and synced safely.
+- **Secrets never sync in plaintext.** Local vault entries are envelope-encrypted; sync stores only
+  encrypted payloads plus the metadata needed for conflict resolution.
 
-```bash
+## Quick start — macOS app
+
+```sh
+brew install xcodegen          # one-time
+
+cd apps/macos
+xcodegen generate              # regenerate the Xcode project from project.yml
+open MacBrowser.xcodeproj       # select the MacBrowser scheme, ⌘R
+```
+
+Build from the CLI (full Xcode required in `/Applications/Xcode.app`):
+
+```sh
+cd apps/macos
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme MacBrowser -destination 'platform=macOS' build
+```
+
+See [`apps/macos/README.md`](apps/macos/README.md) for details and
+[`apps/macos/SHORTCUTS.md`](apps/macos/SHORTCUTS.md) for keyboard shortcuts.
+
+## Quick start — web / backend stack
+
+```sh
 pnpm install
 pnpm build
 pnpm dev:backend
@@ -30,9 +66,16 @@ pnpm dev
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-Generate the iOS Xcode project with XcodeGen:
+## Repository layout
 
-```bash
-cd apps/ios
-xcodegen generate
 ```
+apps/        macos · ios · desktop · backend
+packages/    BrowserCore (Swift engine) + shared TS packages
+infra/       Supabase migrations and infrastructure
+docs/        architecture and roadmap notes
+prompts/     build prompts and design assets (incl. the Argos logo)
+```
+
+## License
+
+Personal project. All rights reserved unless stated otherwise.

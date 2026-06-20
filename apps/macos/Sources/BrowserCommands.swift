@@ -30,7 +30,7 @@ struct BrowserCommands: Commands {
       .disabled(window == nil)
 
       Button("New Tab") {
-        window?.commandBar.presentForNewTab()
+        activeManager?.newTab()
       }
       .keyboardShortcut("t")
       .disabled(window == nil)
@@ -48,6 +48,13 @@ struct BrowserCommands: Commands {
         favoritesStore.toggle(url: url, title: tab.title, spaceID: activeSpace?.id)
       }
       .keyboardShortcut("d")
+      .disabled(window == nil)
+
+      Button("Add to Favorites in All Spaces") {
+        guard let tab = activeTab, let url = tab.url else { return }
+        favoritesStore.toggle(url: url, title: tab.title, spaceID: nil)
+      }
+      .keyboardShortcut("d", modifiers: [.command, .option])
       .disabled(window == nil)
 
       Button("Toggle Pin") {
@@ -74,6 +81,14 @@ struct BrowserCommands: Commands {
         .keyboardShortcut("s", modifiers: [.command, .option])
         .disabled(window == nil)
 
+      Button("Proxy Panel") { window?.toggleRightPanel(.proxy) }
+        .keyboardShortcut("p", modifiers: [.command, .option])
+        .disabled(window == nil)
+
+      Button("AI Panel") { window?.toggleRightPanel(.ai) }
+        .keyboardShortcut("i", modifiers: [.command, .option])
+        .disabled(window == nil)
+
       Divider()
 
       // ⌘R reloads (or stops, mid-load) the active tab — same toggle as the toolbar's reload button.
@@ -95,10 +110,9 @@ struct BrowserCommands: Commands {
     }
 
     CommandMenu("Spaces") {
-      Button("New Space") {
-        guard let window else { return }
-        let space = store.newSpaceWithHome(appSettings.homeURL)
-        window.switchTo(space.id, in: store) { openWindow(value: $0) }
+      Button("New Space…") {
+        // Open the creation sheet (scratch vs duplicate + name) in the focused window's sidebar.
+        window?.wantsNewSpaceSheet = true
       }
       .keyboardShortcut("e", modifiers: [.command, .shift])
       .disabled(window == nil)

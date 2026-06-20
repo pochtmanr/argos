@@ -52,19 +52,53 @@ struct BrowserWindowView: View {
           HistoryView()
         }
         .toolbar {
-          ToolbarItem(placement: .navigation) {
-            Button {
-              withAnimation {
-                windowState.columnVisibility = windowState.columnVisibility == .all ? .detailOnly : .all
-              }
-            } label: {
-              Image(systemName: "sidebar.left")
+          // No custom sidebar-toggle button here: `NavigationSplitView` auto-inserts one, and adding a
+          // second (at `.navigation`) made the toggle appear twice. The ⌥⌘S View ▸ Toggle Sidebar menu
+          // item (BrowserCommands) covers the keyboard path.
+          //
+          // Safari-style single top line: back/forward sit next to the sidebar toggle, the address pill
+          // takes the centered `.principal` slot, and the actions live trailing in `.primaryAction`.
+          if let tab = space.tabManager.activeTab {
+            ToolbarItem(placement: .navigation) {
+              Button { tab.goBack() } label: { Image(systemName: "chevron.backward") }
+                .disabled(!tab.canGoBack)
+                .help("Back")
             }
-            // The ⌥⌘S shortcut lives on the View ▸ Toggle Sidebar menu item (BrowserCommands); this is
-            // the toolbar twin, so it stays a plain click target to avoid a duplicate key binding.
-            .help("Toggle Sidebar")
+            ToolbarItem(placement: .navigation) {
+              Button { tab.goForward() } label: { Image(systemName: "chevron.forward") }
+                .disabled(!tab.canGoForward)
+                .help("Forward")
+            }
+            ToolbarItem(placement: .principal) {
+              // `.id(tab.id)` gives the field fresh @State (address text/focus) per active tab.
+              AddressBarView(tab: tab)
+                .id(tab.id)
+            }
           }
-          ToolbarItem(placement: .primaryAction) {
+          // Trailing actions: New Tab, proxy/AI inspectors, and downloads. Favorites now lives inside
+          // the address pill (see AddressBarView's trailing star), and the share button was removed.
+          // "+" needs no active tab, so it sits outside the `if let tab` block above.
+          ToolbarItemGroup(placement: .primaryAction) {
+            Button {
+              space.tabManager.newTab()
+            } label: {
+              Image(systemName: "plus")
+            }
+            .help("New Tab (⌘T)")
+            Button {
+              windowState.toggleRightPanel(.proxy)
+            } label: {
+              Image(systemName: "network")
+                .symbolVariant(windowState.rightPanel == .proxy ? .fill : .none)
+            }
+            .help("Proxy")
+            Button {
+              windowState.toggleRightPanel(.ai)
+            } label: {
+              Image(systemName: "sparkles")
+                .foregroundStyle(windowState.rightPanel == .ai ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
+            }
+            .help("AI Assistant")
             Button {
               windowState.downloads.toggle()
             } label: {
@@ -154,20 +188,32 @@ struct BrowserWindowView: View {
   private var detailPane: some View {
     if let space = windowState.activeSpace(in: store), let tab = space.tabManager.activeTab {
       VStack(spacing: 0) {
-        // `.id(tab.id)` gives the toolbar fresh @State (address text/focus) when the active tab
-        // identity changes — including across a space switch.
-        ToolbarView(tab: tab)
-          .id(tab.id)
+        // Tabs sit directly under the unified top toolbar (nav + address pill now live in the native
+        // title-bar toolbar, Safari-style).
+        TabStripView()
 
-        ZStack {
-          ForEach(space.tabManager.tabs) { tab in
-            WebView(tab: tab)
-              .opacity(tab.id == space.tabManager.activeTabID ? 1 : 0)
-              .allowsHitTesting(tab.id == space.tabManager.activeTabID)
+        // Web view on the left; the proxy/AI inspector slides in on the right when open.
+        HStack(spacing: 0) {
+          ZStack {
+            ForEach(space.tabManager.tabs) { tab in
+              WebView(tab: tab)
+                .opacity(tab.id == space.tabManager.activeTabID ? 1 : 0)
+                .allowsHitTesting(tab.id == space.tabManager.activeTabID)
+            }
+            // A blank active tab (no URL) is a new-tab page: cover its empty web view with the
+            // favorites start page. Loading a URL into the tab replaces this with the live page.
+            if let active = space.tabManager.activeTab, active.url == nil {
+              StartPageView(tab: active)
+            }
+          }
+          // Make the per-space web-view container identity explicit across space switches.
+          .id(space.id)
+
+          if windowState.rightPanel != nil {
+            Divider()
+            RightPanelView()
           }
         }
-        // Make the per-space web-view container identity explicit across space switches.
-        .id(space.id)
       }
     }
   }

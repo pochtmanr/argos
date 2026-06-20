@@ -23,6 +23,17 @@ public final class SpaceRecord {
   /// Which of this space's tabs was active. Matches a `TabRecord.id` (and `WebTab.id`) in `tabs`.
   public var activeTabID: UUID?
 
+  /// Whether this is the **Personal** profile (the main user's non-isolated identity). Defaulted so
+  /// SwiftData's lightweight migration can add this column to an existing store without wiping data;
+  /// pre-migration spaces load as `false`, and the restore path promotes one to Personal if none is.
+  public var isPersonal: Bool = false
+
+  /// The raw per-space proxy string (e.g. `socks5://host:1080`), or `nil` for none. Defaulted so
+  /// SwiftData's lightweight migration can add this column to an existing store without wiping data.
+  public var proxyConfigString: String?
+  /// Whether the space routed through its proxy. Defaulted for lightweight migration (see above).
+  public var proxyEnabled: Bool = false
+
   /// This space's tabs. Cascade delete removes a space's `TabRecord`s with it; the inverse is
   /// `TabRecord.space`. This relationship *is* the persisted space↔tab link (the "spaceID").
   @Relationship(deleteRule: .cascade, inverse: \TabRecord.space)
@@ -34,7 +45,10 @@ public final class SpaceRecord {
     colorHex: String,
     icon: String,
     order: Int,
-    activeTabID: UUID? = nil
+    activeTabID: UUID? = nil,
+    isPersonal: Bool = false,
+    proxyConfigString: String? = nil,
+    proxyEnabled: Bool = false
   ) {
     self.id = id
     self.name = name
@@ -42,5 +56,8 @@ public final class SpaceRecord {
     self.icon = icon
     self.order = order
     self.activeTabID = activeTabID
+    self.isPersonal = isPersonal
+    self.proxyConfigString = proxyConfigString
+    self.proxyEnabled = proxyEnabled
   }
 }

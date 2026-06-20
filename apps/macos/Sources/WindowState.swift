@@ -23,6 +23,14 @@ import BrowserCore
 final class WindowState: Identifiable {
   typealias ID = UUID
 
+  /// The right-side inspector panels. Exactly one (or none) is open per window.
+  enum RightPanel: Hashable {
+    /// Per-space proxy settings (paste a SOCKS5/HTTP proxy).
+    case proxy
+    /// AI assistant (UI scaffold for now).
+    case ai
+  }
+
   /// Stable window identity: the `WindowGroup` presentation value and the key under which this
   /// window claims a Space in `SpaceStore`.
   let id: ID
@@ -32,6 +40,20 @@ final class WindowState: Identifiable {
 
   /// Sidebar show/hide, local to this window (⌥⌘S). Previously `BrowserWindowView`'s `@State`.
   var columnVisibility: NavigationSplitViewVisibility = .all
+
+  /// The open right-side panel (proxy or AI), or `nil` when none is shown. Window-local UI state.
+  var rightPanel: RightPanel?
+
+  /// Drives the Spaces switcher's "New Space" sheet for *this* window. Set `true` by the sidebar's `+`
+  /// button and the `⌘⇧E` menu command so both share one creation flow; the sheet binds to it and
+  /// resets it to `false` on dismiss. Window-local so the dialog only appears in the focused window.
+  var wantsNewSpaceSheet = false
+
+  /// Toggles a right panel: opening it if closed, switching to it if the other was open, or closing
+  /// it if it was already the open one. Drives the two top-right toolbar buttons.
+  func toggleRightPanel(_ panel: RightPanel) {
+    rightPanel = (rightPanel == panel) ? nil : panel
+  }
 
   /// Per-window presentation controllers — each window opens its own command bar / history sheet /
   /// downloads popover, so ⌘L/⌘Y/⌘⇧J affect only the focused window.

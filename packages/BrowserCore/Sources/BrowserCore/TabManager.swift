@@ -50,6 +50,13 @@ public final class TabManager {
     didSet { for tab in tabs { tab.onDownloadStart = onDownloadStart } }
   }
 
+  /// Builds the `WKWebViewConfiguration` for tabs this manager creates. Set by the owning ``Space`` so
+  /// every new/reseeded/restored tab uses that space's website data store (which carries its per-space
+  /// proxy). `nil` means "use WebKit defaults" (e.g. a bare `TabManager` with no space, as in tests).
+  /// `@ObservationIgnored` because it's plumbing, not observable state.
+  @ObservationIgnored
+  public var webViewConfigurator: (() -> WKWebViewConfiguration)?
+
   /// Seeds exactly one blank tab and makes it active. The app loads its home page into it.
   public init() {
     let first = WebTab()
@@ -71,7 +78,7 @@ public final class TabManager {
   /// Appends a fresh tab, makes it active, and loads `url` into it if provided.
   @discardableResult
   public func newTab(url: URL? = nil) -> WebTab {
-    let tab = WebTab()
+    let tab = WebTab(configuration: webViewConfigurator?())
     tab.onCommit = historyRecorder
     tab.onDownloadStart = onDownloadStart
     tabs.append(tab)
@@ -99,7 +106,7 @@ public final class TabManager {
     tabs.remove(at: index)
 
     if tabs.isEmpty {
-      let fresh = WebTab()
+      let fresh = WebTab(configuration: webViewConfigurator?())
       fresh.onCommit = historyRecorder
       fresh.onDownloadStart = onDownloadStart
       tabs = [fresh]
@@ -120,6 +127,29 @@ public final class TabManager {
     let tab = tabs.remove(at: from)
     let destination = min(max(to, 0), tabs.count)
     tabs.insert(tab, at: destination)
+  }
+
+  /// Recreates every live tab's `WKWebView` using the current ``webViewConfigurator``, preserving each
+  /// tab's id, url, title, pinned state, and the active selection. Called by the owning ``Space`` when
+  /// its proxy changes: a `WKWebView`'s website data store (which carries the proxy) is fixed at
+  /// creation, so the only way to re-route existing tabs is to rebuild them. Each rebuilt tab reloads
+  /// its url through the new data store. Sinks (`historyRecorder`/`onDownloadStart`) are rewired.
+  public func rebuildWebViews() {
+    let previousActive = activeTabID
+    tabs = tabs.map { old in
+      let tab = WebTab(
+        id: old.id, url: old.url, title: old.title,
+        isPinned: old.isPinned, lastAccessed: old.lastAccessed,
+        // Preserve lazy restore: a tab that hadn't loaded its deferred URL yet stays deferred, so
+        // re-hosting a space's tabs onto a new store doesn't force every tab to load at once.
+        deferLoad: old.isDeferred,
+        configuration: webViewConfigurator?()
+      )
+      tab.onCommit = historyRecorder
+      tab.onDownloadStart = onDownloadStart
+      return tab
+    }
+    activeTabID = tabs.contains { $0.id == previousActive } ? previousActive : tabs.first?.id
   }
 
   /// Toggles the pinned state of the tab with `id`. Pinning moves it into the sidebar's pinned section
@@ -166,7 +196,8 @@ public final class TabManager {
   public func restoreArchived(_ id: ArchivedTab.ID) -> WebTab? {
     guard let index = archivedTabs.firstIndex(where: { $0.id == id }) else { return nil }
     let record = archivedTabs.remove(at: index)
-    let tab = WebTab(id: record.id, url: record.url, title: record.title, lastAccessed: Date())
+    let tab = WebTab(id: record.id, url: record.url, title: record.title, lastAccessed: Date(),
+                     configuration: webViewConfigurator?())
     tab.onCommit = historyRecorder
     tab.onDownloadStart = onDownloadStart
     tabs.append(tab)

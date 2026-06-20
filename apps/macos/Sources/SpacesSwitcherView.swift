@@ -17,17 +17,27 @@ struct SpacesSwitcherView: View {
   /// When non-nil, the rename alert is shown for this space; `renameText` holds the edited name.
   @State private var renamingSpaceID: Space.ID?
   @State private var renameText = ""
+  /// Tracks which space card the pointer is over so inactive cards can highlight on hover.
+  @State private var hoveringSpaceID: Space.ID?
 
   var body: some View {
-    VStack(spacing: 2) {
-      ForEach(store.spaces) { space in
+    VStack(spacing: 6) {
+      // The Personal profile (the main user's identity) is pinned at the top, set apart from the
+      // isolated spaces below it.
+      if let personal = store.personalSpace {
+        spaceRow(personal)
+        if store.spaces.contains(where: { !$0.isPersonal }) {
+          Divider().padding(.vertical, 4)
+        }
+      }
+
+      ForEach(store.spaces.filter { !$0.isPersonal }) { space in
         spaceRow(space)
       }
 
       newSpaceButton
     }
-    .padding(8)
-    .background(.bar)
+    .padding(10)
     .alert("Rename Space", isPresented: isRenaming) {
       TextField("Name", text: $renameText)
       Button("Cancel", role: .cancel) { renamingSpaceID = nil }
@@ -38,6 +48,31 @@ struct SpacesSwitcherView: View {
         renamingSpaceID = nil
       }
     }
+    .sheet(isPresented: createSheetBinding) {
+      CreateSpaceSheet(
+        spaces: store.spaces,
+        onCancel: { windowState.wantsNewSpaceSheet = false },
+        onCreate: { mode, sourceID, name in createSpace(mode: mode, sourceID: sourceID, name: name) }
+      )
+    }
+  }
+
+  /// Performs the creation the `CreateSpaceSheet` requested, then shows the new space in this window.
+  /// Duplication is async (it copies the source's cookies), so it runs in a `Task`.
+  private func createSpace(mode: CreateSpaceSheet.Mode, sourceID: Space.ID?, name: String) {
+    windowState.wantsNewSpaceSheet = false
+    switch mode {
+    case .scratch:
+      let space = store.newSpaceWithHome(appSettings.homeURL)
+      store.rename(space.id, to: name)
+      windowState.switchTo(space.id, in: store) { openWindow(value: $0) }
+    case .duplicate:
+      guard let sourceID, let source = store.spaces.first(where: { $0.id == sourceID }) else { return }
+      Task {
+        let space = await store.duplicateSpace(source, name: name)
+        windowState.switchTo(space.id, in: store) { openWindow(value: $0) }
+      }
+    }
   }
 
   // MARK: - Rows
@@ -46,13 +81,14 @@ struct SpacesSwitcherView: View {
     let isActive = space.id == windowState.activeSpaceID
     // Shown in another window? (Claimed by some window that isn't this one.)
     let elsewhere = store.windowDisplaying(space.id).map { $0 != windowState.id } ?? false
+    let hovering = hoveringSpaceID == space.id
     let tint = SpaceColor.color(space.colorHex)
-    return HStack(spacing: 8) {
+    return HStack(spacing: 10) {
       Image(systemName: space.icon)
-        .font(.system(size: 11, weight: .semibold))
+        .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(.white)
-        .frame(width: 22, height: 22)
-        .background(tint, in: RoundedRectangle(cornerRadius: 6))
+        .frame(width: 24, height: 24)
+        .background(tint, in: RoundedRectangle(cornerRadius: 7))
 
       Text(space.name)
         .lineLimit(1)
@@ -61,25 +97,44 @@ struct SpacesSwitcherView: View {
 
       Spacer(minLength: 0)
 
-      // Indicate spaces currently open in another window; tapping such a row focuses that window.
+      // Indicate spaces currently open in another window (tapping focuses that window); otherwise a
+      // small tinted dot marks the active space.
       if elsewhere {
         Image(systemName: "macwindow")
           .font(.system(size: 10))
           .foregroundStyle(.secondary)
+      } else if isActive {
+        Circle()
+          .fill(tint)
+          .frame(width: 6, height: 6)
       }
     }
-    .padding(.horizontal, 8)
-    .padding(.vertical, 6)
-    .background(
-      RoundedRectangle(cornerRadius: 8)
-        .fill(isActive ? tint.opacity(0.18) : Color.clear)
-    )
-    .contentShape(Rectangle())
+    .padding(.horizontal, 10)
+    .padding(.vertical, 8)
+    .background(spaceCardBackground(isActive: isActive, hovering: hovering, tint: tint))
+    .shadow(color: .black.opacity(isActive ? 0.12 : 0), radius: 3, y: 1)
+    .contentShape(RoundedRectangle(cornerRadius: 12))
+    .onHover { hoveringSpaceID = $0 ? space.id : (hoveringSpaceID == space.id ? nil : hoveringSpaceID) }
     .onTapGesture {
       windowState.switchTo(space.id, in: store) { openWindow(value: $0) }
     }
     .contextMenu { contextMenu(for: space) }
     .help(elsewhere ? "\(space.name) — open in another window" : space.name)
+  }
+
+  /// Three-state card surface mirroring the top tab chips: the active space is elevated on a
+  /// `controlBackgroundColor` fill with a tinted border, hovered cards get a faint wash, and idle
+  /// cards stay clear.
+  @ViewBuilder
+  private func spaceCardBackground(isActive: Bool, hovering: Bool, tint: Color) -> some View {
+    if isActive {
+      RoundedRectangle(cornerRadius: 12)
+        .fill(Color(nsColor: .controlBackgroundColor))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(tint.opacity(0.55), lineWidth: 1))
+    } else {
+      RoundedRectangle(cornerRadius: 12)
+        .fill(Color.secondary.opacity(hovering ? 0.10 : 0))
+    }
   }
 
   @ViewBuilder
@@ -114,10 +169,13 @@ struct SpacesSwitcherView: View {
       }
     }
 
-    Divider()
+    // The Personal profile is the main user's identity and can't be deleted.
+    if !space.isPersonal {
+      Divider()
 
-    Button("Delete Space", role: .destructive) {
-      store.deleteSpace(space.id)
+      Button("Delete Space", role: .destructive) {
+        store.deleteSpace(space.id)
+      }
     }
   }
 
@@ -125,18 +183,26 @@ struct SpacesSwitcherView: View {
 
   private var newSpaceButton: some View {
     Button {
-      let space = store.newSpaceWithHome(appSettings.homeURL)
-      // Show the new Space in this window (claiming it), rather than only updating global state.
-      windowState.switchTo(space.id, in: store) { openWindow(value: $0) }
+      // Open the creation sheet (scratch vs duplicate + name) instead of creating immediately.
+      windowState.wantsNewSpaceSheet = true
     } label: {
       Label("New Space", systemImage: "plus")
         .font(.callout)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+          RoundedRectangle(cornerRadius: 12)
+            .strokeBorder(
+              Color.secondary.opacity(0.4),
+              style: StrokeStyle(lineWidth: 1, dash: [4])
+            )
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 12))
     }
-    .buttonStyle(.borderless)
+    .buttonStyle(.plain)
     .foregroundStyle(.secondary)
+    .padding(.top, 2)
     .help("New Space (⌘⇧E)")
   }
 
@@ -147,11 +213,28 @@ struct SpacesSwitcherView: View {
       set: { if !$0 { renamingSpaceID = nil } }
     )
   }
+
+  /// Bridges this window's `wantsNewSpaceSheet` flag to the `Bool` binding the `.sheet` expects, so the
+  /// `+` button and the `⌘⇧E` menu command share one creation sheet.
+  private var createSheetBinding: Binding<Bool> {
+    Binding(
+      get: { windowState.wantsNewSpaceSheet },
+      set: { windowState.wantsNewSpaceSheet = $0 }
+    )
+  }
 }
 
 #Preview {
   let store = SpaceStore()
-  return SpacesSwitcherView()
+  let work = store.newSpaceWithHome(URL(string: "https://www.swift.org")!)
+  store.rename(work.id, to: "Work")
+  store.recolor(work.id, to: "#8B5CF6")
+  store.setIcon(work.id, to: "briefcase")
+  let reading = store.newSpaceWithHome(URL(string: "https://www.apple.com")!)
+  store.rename(reading.id, to: "Reading")
+  store.recolor(reading.id, to: "#F59E0B")
+  store.setIcon(reading.id, to: "book")
+  return ScrollView { SpacesSwitcherView() }
     .environment(store)
     .environment(WindowState())
     .environment(AppSettings())

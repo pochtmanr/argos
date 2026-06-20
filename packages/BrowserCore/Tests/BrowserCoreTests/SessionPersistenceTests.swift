@@ -1,4 +1,5 @@
 import Foundation
+import WebKit
 import XCTest
 @testable import BrowserCore
 
@@ -151,5 +152,34 @@ final class SessionPersistenceTests: XCTestCase {
     let b = Space(name: "B", colorHex: "#222222", icon: "b.square")
     let store = SpaceStore(spaces: [a, b], activeSpaceID: UUID())
     XCTAssertEqual(store.activeSpaceID, a.id, "an unknown active id falls back to the first space")
+  }
+
+  // MARK: - Personal profile persistence
+
+  func testIsPersonalRoundTrips() throws {
+    let persistence = try makePersistence()
+    let personal = Space(name: "Personal", colorHex: "#3B82F6", icon: "person", isPersonal: true,
+                         tabManager: TabManager(tabs: [makeTab("https://p.example", "P")], activeTabID: nil))
+    let work = Space(name: "Work", colorHex: "#FF0000", icon: "briefcase",
+                     tabManager: TabManager(tabs: [makeTab("https://w.example", "W")], activeTabID: nil))
+    persistence.save(SpaceStore(spaces: [personal, work], activeSpaceID: personal.id))
+
+    let restored = try XCTUnwrap(persistence.load())
+    XCTAssertEqual(restored.spaces.map(\.isPersonal), [true, false])
+    XCTAssertIdentical(restored.personalSpace?.dataStore, WKWebsiteDataStore.default())
+  }
+
+  func testRestorePromotesFirstSpaceWhenNonePersonal() throws {
+    // Pre-migration data has no Personal flag; restore must promote the first space so the invariant
+    // (exactly one undeletable Personal profile) still holds.
+    let persistence = try makePersistence()
+    let a = Space(name: "A", colorHex: "#111111", icon: "a.square",
+                  tabManager: TabManager(tabs: [makeTab("https://a.example", "A")], activeTabID: nil))
+    let b = Space(name: "B", colorHex: "#222222", icon: "b.square",
+                  tabManager: TabManager(tabs: [makeTab("https://b.example", "B")], activeTabID: nil))
+    persistence.save(SpaceStore(spaces: [a, b], activeSpaceID: a.id))
+
+    let restored = try XCTUnwrap(persistence.load())
+    XCTAssertEqual(restored.spaces.map(\.isPersonal), [true, false], "first space is promoted to Personal")
   }
 }

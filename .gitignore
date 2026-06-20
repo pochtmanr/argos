@@ -15,3 +15,8 @@ DerivedData
 docker/volumes
 coverage
 *.log
+.DS_Store
+.claude
+*.xcodeproj/xcuserdata
+xcuserdata
+.swiftpm

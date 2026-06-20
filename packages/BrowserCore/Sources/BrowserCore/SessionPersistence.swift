@@ -65,7 +65,13 @@ public final class SessionPersistence {
     let descriptor = FetchDescriptor<SpaceRecord>(sortBy: [SortDescriptor(\.order)])
     guard let records = try? context.fetch(descriptor), !records.isEmpty else { return nil }
 
-    let spaces = records.map { record -> Space in
+    // Guarantee exactly one Personal profile survives restore. Pre-migration stores (and any store
+    // that somehow lost the flag) have none; promote the first space so the main user's identity and
+    // the "can't delete Personal" invariant still hold.
+    let hasPersonal = records.contains { $0.isPersonal }
+
+    let spaces = records.enumerated().map { index, record -> Space in
+      let isPersonal = record.isPersonal || (!hasPersonal && index == 0)
       let tabRecords = record.tabs.sorted { $0.order < $1.order }
       // Archived tabs come back as lightweight records (no live web view), not open tabs.
       let openRecords = tabRecords.filter { !$0.isArchived }
@@ -91,7 +97,10 @@ public final class SessionPersistence {
         name: record.name,
         colorHex: record.colorHex,
         icon: record.icon,
-        tabManager: tabManager
+        isPersonal: isPersonal,
+        tabManager: tabManager,
+        proxyConfigString: record.proxyConfigString,
+        proxyEnabled: record.proxyEnabled
       )
     }
 
@@ -120,7 +129,7 @@ public final class SessionPersistence {
       let record = spaceByID[space.id] ?? {
         let new = SpaceRecord(
           id: space.id, name: space.name, colorHex: space.colorHex,
-          icon: space.icon, order: spaceIndex
+          icon: space.icon, order: spaceIndex, isPersonal: space.isPersonal
         )
         context.insert(new)
         spaceByID[space.id] = new
@@ -131,6 +140,9 @@ public final class SessionPersistence {
       record.icon = space.icon
       record.order = spaceIndex
       record.activeTabID = manager.activeTabID
+      record.isPersonal = space.isPersonal
+      record.proxyConfigString = space.proxyConfigString
+      record.proxyEnabled = space.proxyEnabled
 
       reconcileTabs(of: manager, into: record)
     }

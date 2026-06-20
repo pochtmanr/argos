@@ -20,6 +20,10 @@ public final class WebTab: Identifiable {
   public private(set) var url: URL?
   /// The current page title, kept in sync via KVO.
   public private(set) var title: String = ""
+  /// The best favicon URL for the current page, resolved after each committed navigation. `nil` until
+  /// a page with a discoverable icon loads (UIs fall back to a placeholder glyph). Updated on the main
+  /// actor from ``updateFavicon()``.
+  public private(set) var faviconURL: URL?
   /// Load progress in `0...1`, kept in sync via KVO.
   public private(set) var estimatedProgress: Double = 0
   /// Whether a navigation is in flight (driven by the navigation delegate).
@@ -62,6 +66,11 @@ public final class WebTab: Identifiable {
   @ObservationIgnored
   private var pendingURL: URL?
 
+  /// Whether this tab still has a deferred restore URL it hasn't loaded yet. `TabManager.rebuildWebViews`
+  /// reads this so re-hosting a space's tabs onto a new data store preserves lazy restore instead of
+  /// force-loading every tab.
+  public var isDeferred: Bool { pendingURL != nil }
+
   /// Creates a tab.
   ///
   /// Normal use needs no arguments (`WebTab()`), seeding a blank tab the app then loads into. The
@@ -85,6 +94,9 @@ public final class WebTab: Identifiable {
     let configuration = configuration ?? WKWebViewConfiguration()
     configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
     self.webView = WKWebView(frame: .zero, configuration: configuration)
+    // Force a desktop Safari UA so sites (notably Google) serve the full desktop layout instead of
+    // treating the default WebKit UA as a lesser/mobile client.
+    self.webView.customUserAgent = UserAgent.desktopSafari
 
     self.navigationProxy = NavigationProxy(owner: self)
     self.webView.navigationDelegate = navigationProxy
@@ -174,6 +186,54 @@ public final class WebTab: Identifiable {
     webView.stopLoading()
   }
 
+  // MARK: - Favicon
+
+  /// Resolves the best favicon for the current page and publishes it to ``faviconURL``. Asks the page
+  /// for its declared `<link rel="icon">` (preferring the highest-resolution / last-declared one), then
+  /// resolves it against the page URL. Falls back to the origin's `/favicon.ico` when the page declares
+  /// none. Called after each committed navigation.
+  func updateFavicon() {
+    guard let pageURL = webView.url, let host = pageURL.host(), !host.isEmpty else {
+      faviconURL = nil
+      return
+    }
+
+    // Default fallback: the origin's conventional /favicon.ico.
+    var fallback = URLComponents()
+    fallback.scheme = pageURL.scheme ?? "https"
+    fallback.host = host
+    if let port = pageURL.port { fallback.port = port }
+    fallback.path = "/favicon.ico"
+    let fallbackURL = fallback.url
+
+    let js = """
+    (function () {
+      var links = Array.from(document.querySelectorAll('link[rel~="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]'));
+      if (!links.length) return '';
+      function size(l) {
+        var s = (l.getAttribute('sizes') || '').split('x')[0];
+        var n = parseInt(s, 10);
+        return isNaN(n) ? 0 : n;
+      }
+      links.sort(function (a, b) { return size(a) - size(b); });
+      var best = links[links.length - 1];
+      return best.href || '';
+    })()
+    """
+
+    webView.evaluateJavaScript(js) { [weak self] result, _ in
+      MainActor.assumeIsolated {
+        guard let self else { return }
+        if let href = result as? String, !href.isEmpty,
+           let resolved = URL(string: href, relativeTo: pageURL) {
+          self.faviconURL = resolved.absoluteURL
+        } else {
+          self.faviconURL = fallbackURL
+        }
+      }
+    }
+  }
+
   // MARK: - Navigation delegate proxy
 
   /// Private delegate that forwards load lifecycle into the owning tab's observable state.
@@ -194,6 +254,8 @@ public final class WebTab: Identifiable {
         owner.isLoading = false
         // Navigating counts as using the tab, so refresh recency to keep it out of the archive pass.
         owner.markAccessed()
+        // Resolve the page's favicon for the tab strip / address bar.
+        owner.updateFavicon()
         // Committed navigation: report the settled URL/title for history recording.
         if let url = webView.url { owner.onCommit?(url, owner.title) }
       }

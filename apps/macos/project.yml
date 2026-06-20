@@ -30,10 +30,10 @@ targets:
     info:
       path: Generated/Info.plist
       properties:
-        CFBundleDisplayName: Browser
-        CFBundleName: Browser
+        CFBundleDisplayName: Argos
+        CFBundleName: Argos
         LSMinimumSystemVersion: "14.0"
-        NSHumanReadableCopyright: "Browser — a personal daily-driver browser."
+        NSHumanReadableCopyright: "Argos — a personal daily-driver browser."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         NSMainNibFile: ""

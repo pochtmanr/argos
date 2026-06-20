@@ -1,4 +1,5 @@
 import Foundation
+import WebKit
 import XCTest
 @testable import BrowserCore
 
@@ -144,15 +145,23 @@ final class SpaceStoreTests: XCTestCase {
     XCTAssertEqual(store.activeSpaceID, b.id)
   }
 
-  func testDeleteLastSpaceReseedsFreshDefault() {
+  func testDeletePersonalSpaceIsRefused() {
+    // The seeded space is the Personal profile (the main user's identity) and must never be deletable.
     let store = SpaceStore()
-    let only = store.spaces[0]
-    store.deleteSpace(only.id)
-    XCTAssertEqual(store.spaces.count, 1)
-    XCTAssertNotEqual(store.spaces[0].id, only.id)
-    XCTAssertEqual(store.activeSpaceID, store.spaces[0].id)
-    XCTAssertFalse(store.spaces[0].name.isEmpty)
-    XCTAssertEqual(store.spaces[0].tabManager.tabs.count, 1) // fresh space has its own tab
+    let personal = store.spaces[0]
+    XCTAssertTrue(personal.isPersonal)
+    store.deleteSpace(personal.id)
+    XCTAssertEqual(store.spaces.map(\.id), [personal.id]) // still present, same instance
+    XCTAssertEqual(store.activeSpaceID, personal.id)
+  }
+
+  func testDeletingAllIsolatedSpacesLeavesPersonal() {
+    let store = SpaceStore()
+    let personal = store.spaces[0]
+    let b = store.newSpace()
+    store.deleteSpace(b.id)
+    XCTAssertEqual(store.spaces.map(\.id), [personal.id])
+    XCTAssertTrue(store.spaces[0].isPersonal)
   }
 
   func testDeleteUnknownIdIsIgnored() {
@@ -284,5 +293,52 @@ final class SpaceStoreTests: XCTestCase {
     XCTAssertFalse(store.claimedSpaceIDs.contains(second.id))
     XCTAssertNil(store.windowDisplaying(second.id))
     XCTAssertEqual(store.spaces.map(\.id), [first.id])
+  }
+
+  // MARK: - Personal profile & per-space isolation
+
+  func testSeededSpaceIsThePersonalProfile() {
+    let store = SpaceStore()
+    XCTAssertTrue(store.spaces[0].isPersonal)
+    XCTAssertIdentical(store.personalSpace, store.spaces[0])
+  }
+
+  func testPersonalSpaceUsesSharedDefaultStore() {
+    // Personal is the main user's real identity, so it shares the default store (keeps existing logins).
+    let store = SpaceStore()
+    XCTAssertIdentical(store.personalSpace?.dataStore, WKWebsiteDataStore.default())
+  }
+
+  func testNewSpaceIsIsolatedFromDefaultAndPersonal() {
+    // A from-scratch space is its own identity: a dedicated store, not the shared default, so it has
+    // no accounts logged in.
+    let store = SpaceStore()
+    let created = store.newSpace()
+    XCTAssertFalse(created.isPersonal)
+    XCTAssertNotIdentical(created.dataStore, WKWebsiteDataStore.default())
+    XCTAssertNotIdentical(created.dataStore, store.personalSpace?.dataStore)
+  }
+
+  func testDuplicateCopiesAppearanceProxyAndTabsAsNewIsolatedSpace() async {
+    let store = SpaceStore()
+    let source = store.newSpace(name: "Work", colorHex: "#FF0000", icon: "briefcase")
+    source.updateProxy(string: "socks5://10.0.0.1:1080", enabled: true)
+    source.tabManager.newTab(url: URL(string: "https://example.com"))
+    let sourceURLs = source.tabManager.tabs.compactMap(\.url)
+
+    let copy = await store.duplicateSpace(source, name: "Work copy")
+
+    XCTAssertEqual(copy.name, "Work copy")
+    XCTAssertEqual(copy.colorHex, source.colorHex)
+    XCTAssertEqual(copy.icon, source.icon)
+    XCTAssertEqual(copy.proxyConfigString, source.proxyConfigString)
+    XCTAssertEqual(copy.proxyEnabled, source.proxyEnabled)
+    XCTAssertFalse(copy.isPersonal)
+    // A new isolated identity: fresh id, fresh tab ids, its own store.
+    XCTAssertNotEqual(copy.id, source.id)
+    XCTAssertEqual(copy.tabManager.tabs.compactMap(\.url), sourceURLs)
+    XCTAssertTrue(Set(copy.tabManager.tabs.map(\.id)).isDisjoint(with: source.tabManager.tabs.map(\.id)))
+    XCTAssertNotIdentical(copy.dataStore, source.dataStore)
+    XCTAssertEqual(store.activeSpaceID, copy.id)
   }
 }

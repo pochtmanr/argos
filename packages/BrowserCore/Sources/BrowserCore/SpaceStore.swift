@@ -63,6 +63,12 @@ public final class SpaceStore {
     return spaces.first { $0.id == activeSpaceID }
   }
 
+  /// The **Personal** profile — the main user's identity, which always exists and is never one of the
+  /// isolated spaces. There is exactly one; the seed/restore paths guarantee it.
+  public var personalSpace: Space? {
+    spaces.first { $0.isPersonal }
+  }
+
   /// App-level sink for committed navigations (history recording). Set once at app root; it fans out
   /// to every space's `TabManager` (which in turn fans out to its tabs), and `newSpace`/`deleteSpace`
   /// forward it to spaces they create, so restored and newly-made tabs all report through one path.
@@ -113,6 +119,47 @@ public final class SpaceStore {
     return space
   }
 
+  /// Appends an isolated **duplicate** of `source`, makes it active, and returns it.
+  ///
+  /// Copies the source's appearance (color/icon), proxy configuration, and open tabs (their URLs and
+  /// pinned state — restored lazily, like session restore). It then clones the source's **cookies** so
+  /// the duplicate is signed into the same accounts (see `Space.importCookies(from:)` for the
+  /// cookies-only caveat). The duplicate is always a new isolated identity with its own data store and a
+  /// fresh id — duplicating never produces a second Personal profile.
+  @discardableResult
+  public func duplicateSpace(_ source: Space, name: String) async -> Space {
+    let sourceManager = source.tabManager
+    // Rebuild the open tabs with fresh ids, deferring their load so the duplicate doesn't fetch every
+    // page at once. A tab with no url stays a blank tab.
+    let copiedTabs = sourceManager.tabs.map { tab in
+      WebTab(url: tab.url, title: tab.title, isPinned: tab.isPinned, deferLoad: tab.url != nil)
+    }
+    let tabs = copiedTabs.isEmpty ? [WebTab()] : copiedTabs
+    // Preserve which tab was active by position, since the duplicate's tabs have new ids.
+    let activeIndex = sourceManager.tabs.firstIndex { $0.id == sourceManager.activeTabID }
+    let activeTabID = activeIndex.map { tabs[$0].id }
+    let manager = TabManager(tabs: tabs, activeTabID: activeTabID)
+
+    let space = Space(
+      name: name,
+      colorHex: source.colorHex,
+      icon: source.icon,
+      tabManager: manager,
+      proxyConfigString: source.proxyConfigString,
+      proxyEnabled: source.proxyEnabled
+    )
+    space.tabManager.historyRecorder = historyRecorder
+    space.tabManager.onDownloadStart = onDownloadStart
+
+    await space.importCookies(from: source)
+
+    spaces.append(space)
+    activeSpaceID = space.id
+    // The user is switching to the duplicate now, so load its active tab eagerly (idempotent).
+    space.tabManager.activeTab?.ensureLoaded()
+    return space
+  }
+
   /// Makes the space with `id` active, if it exists.
   public func switchTo(_ id: Space.ID) {
     guard spaces.contains(where: { $0.id == id }) else { return }
@@ -134,6 +181,13 @@ public final class SpaceStore {
     space(id)?.icon = icon
   }
 
+  /// Sets (or clears) the per-space proxy for the space with `id`. Rebuilds the space's data store and
+  /// re-hosts its tabs so the new route applies right away. Pass `enabled: false` (or an empty/invalid
+  /// string) to route directly again.
+  public func setProxy(_ id: Space.ID, string: String?, enabled: Bool) {
+    space(id)?.updateProxy(string: string, enabled: enabled)
+  }
+
   /// Deletes the space with `id`.
   ///
   /// If the deleted space was active, selects the space that shifts into the freed slot (the right
@@ -143,6 +197,8 @@ public final class SpaceStore {
   /// `TabManager`/`WebTab`s, so its web views are released.
   public func deleteSpace(_ id: Space.ID) {
     guard let index = spaces.firstIndex(where: { $0.id == id }) else { return }
+    // The Personal profile is the main user's identity and is never deletable.
+    guard !spaces[index].isPersonal else { return }
     let wasActive = activeSpaceID == id
     spaces.remove(at: index)
     // Free any window's claim on the deleted space so it's no longer reported as displayed; the
@@ -195,7 +251,10 @@ public final class SpaceStore {
     spaces.first { $0.id == id }
   }
 
+  /// Seeds the **Personal** profile — the main user's non-isolated identity, present on first run and
+  /// after a reset. It uses the shared default data store (so the user's real logins are available) and
+  /// can't be deleted.
   private static func makeDefaultSpace() -> Space {
-    Space(name: "Personal", colorHex: defaultColorHex, icon: defaultIcon)
+    Space(name: "Personal", colorHex: defaultColorHex, icon: defaultIcon, isPersonal: true)
   }
 }
