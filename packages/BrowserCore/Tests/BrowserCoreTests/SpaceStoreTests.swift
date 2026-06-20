@@ -202,4 +202,87 @@ final class SpaceStoreTests: XCTestCase {
     store.moveSpace(from: 5, to: 0)
     XCTAssertEqual(store.spaces.map(\.id), [a.id, b.id])
   }
+
+  // MARK: - Window claims (multi-window exclusive ownership)
+
+  func testFirstUnclaimedSpaceReturnsFirstWhenNoneClaimed() {
+    let store = SpaceStore()
+    let first = store.spaces[0]
+    XCTAssertEqual(store.firstUnclaimedSpace()?.id, first.id)
+    XCTAssertTrue(store.claimedSpaceIDs.isEmpty)
+  }
+
+  func testClaimMarksSpaceClaimedAndDisplaying() {
+    let store = SpaceStore()
+    let space = store.spaces[0]
+    let window = UUID()
+    store.claim(space.id, for: window)
+    XCTAssertTrue(store.claimedSpaceIDs.contains(space.id))
+    XCTAssertEqual(store.windowDisplaying(space.id), window)
+  }
+
+  func testFirstUnclaimedSkipsClaimedSpaces() {
+    let store = SpaceStore()
+    let first = store.spaces[0]
+    let second = store.newSpace()
+    store.claim(first.id, for: UUID())
+    XCTAssertEqual(store.firstUnclaimedSpace()?.id, second.id)
+  }
+
+  func testFirstUnclaimedReturnsNilWhenAllClaimed() {
+    let store = SpaceStore()
+    let first = store.spaces[0]
+    let second = store.newSpace()
+    store.claim(first.id, for: UUID())
+    store.claim(second.id, for: UUID())
+    XCTAssertNil(store.firstUnclaimedSpace())
+  }
+
+  func testClaimingAnotherSpaceMovesTheWindowOffItsPrevious() {
+    let store = SpaceStore()
+    let first = store.spaces[0]
+    let second = store.newSpace()
+    let window = UUID()
+    store.claim(first.id, for: window)
+    store.claim(second.id, for: window) // a window displays exactly one space
+    XCTAssertFalse(store.claimedSpaceIDs.contains(first.id))
+    XCTAssertNil(store.windowDisplaying(first.id))
+    XCTAssertEqual(store.windowDisplaying(second.id), window)
+  }
+
+  func testReleaseClaimsFreesTheSpace() {
+    let store = SpaceStore()
+    let space = store.spaces[0]
+    let window = UUID()
+    store.claim(space.id, for: window)
+    store.releaseClaims(for: window)
+    XCTAssertFalse(store.claimedSpaceIDs.contains(space.id))
+    XCTAssertNil(store.windowDisplaying(space.id))
+    XCTAssertEqual(store.firstUnclaimedSpace()?.id, space.id)
+  }
+
+  func testTwoWindowsClaimDistinctSpaces() {
+    let store = SpaceStore()
+    let first = store.spaces[0]
+    let second = store.newSpace()
+    let windowA = UUID()
+    let windowB = UUID()
+    store.claim(first.id, for: windowA)
+    store.claim(second.id, for: windowB)
+    XCTAssertEqual(store.windowDisplaying(first.id), windowA)
+    XCTAssertEqual(store.windowDisplaying(second.id), windowB)
+    XCTAssertEqual(store.claimedSpaceIDs, [first.id, second.id])
+  }
+
+  func testDeleteSpaceClearsItsClaim() {
+    let store = SpaceStore()
+    let first = store.spaces[0]
+    let second = store.newSpace()
+    let window = UUID()
+    store.claim(second.id, for: window)
+    store.deleteSpace(second.id)
+    XCTAssertFalse(store.claimedSpaceIDs.contains(second.id))
+    XCTAssertNil(store.windowDisplaying(second.id))
+    XCTAssertEqual(store.spaces.map(\.id), [first.id])
+  }
 }

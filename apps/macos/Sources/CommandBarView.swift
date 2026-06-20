@@ -11,15 +11,22 @@ import SwiftUI
 /// `OpenTab`s, renders the results, and routes the chosen action back into `SpaceStore`.
 struct CommandBarView: View {
   @Environment(SpaceStore.self) private var store
+  @Environment(WindowState.self) private var windowState
   @Environment(CommandBarController.self) private var controller
   @Environment(HistoryStore.self) private var history
   @Environment(FavoritesStore.self) private var favoritesStore
+  @Environment(AppSettings.self) private var appSettings
+  @Environment(\.openWindow) private var openWindow
 
   @State private var searchText = ""
   @State private var selectedIndex = 0
   @FocusState private var fieldFocused: Bool
 
-  private let engine = SuggestionEngine()
+  /// Built from the configured search engine so the bar's URL/search action agrees with the address
+  /// bar on what a typed string means.
+  private var engine: SuggestionEngine {
+    SuggestionEngine(parser: URLBarParser(searchTemplate: appSettings.searchTemplate))
+  }
 
   /// All tabs across every Space, flattened for the ranker. Selecting one switches Space + tab.
   private var openTabs: [OpenTab] {
@@ -28,9 +35,9 @@ struct CommandBarView: View {
     }
   }
 
-  /// The active Space's favorites, mapped for the ranker (favorites are per-Space).
+  /// This window's active Space's favorites, mapped for the ranker (favorites are per-Space).
   private var favorites: [FavoriteItem] {
-    favoritesStore.all(spaceID: store.activeSpaceID).map {
+    favoritesStore.all(spaceID: windowState.activeSpaceID).map {
       FavoriteItem(id: $0.id, title: $0.title, url: $0.url)
     }
   }
@@ -140,20 +147,22 @@ struct CommandBarView: View {
     controller.dismiss()
   }
 
-  /// Load `url` per how the bar was opened: a new tab for ⌘T, the current tab for ⌘L.
+  /// Load `url` per how the bar was opened: a new tab for ⌘T, the current tab for ⌘L. Targets this
+  /// window's active Space.
   private func open(_ url: URL) {
-    guard let manager = store.activeSpace?.tabManager else { return }
+    guard let manager = windowState.activeSpace(in: store)?.tabManager else { return }
     switch controller.mode {
     case .newTab: manager.newTab(url: url)
     case .currentTab: manager.activeTab?.load(url)
     }
   }
 
-  /// Find the Space owning `tabID`, switch to it, then select the tab (all-Spaces switching).
+  /// Find the Space owning `tabID` and reveal the tab. If that Space is open in another window, focus
+  /// that window (where the tab lives); otherwise switch this window to it and select the tab.
   private func switchToTab(_ tabID: UUID) {
     for space in store.spaces where space.tabManager.tabs.contains(where: { $0.id == tabID }) {
-      store.switchTo(space.id)
-      space.tabManager.select(tabID)
+      windowState.switchTo(space.id, in: store) { openWindow(value: $0) }
+      if windowState.activeSpaceID == space.id { space.tabManager.select(tabID) }
       return
     }
   }

@@ -8,6 +8,11 @@ import BrowserCore
 /// space's* manager, so this view stays space-unaware. The switcher reads `SpaceStore` itself.
 struct SidebarView: View {
   @Environment(TabManager.self) private var manager
+  /// Supplies the configurable home page for the "New Tab" button.
+  @Environment(AppSettings.self) private var appSettings
+
+  /// Drives the Archived sheet, opened from the bottom-bar button below the tab list.
+  @State private var showingArchived = false
 
   var body: some View {
     VStack(spacing: 0) {
@@ -32,14 +37,23 @@ struct SidebarView: View {
           .onMove(perform: moveUnpinned)
         }
       }
-      // Keep the "new tab" button pinned below the scrolling list.
+      // Keep the "new tab" button (and the Archived entry, when non-empty) pinned below the list.
       .safeAreaInset(edge: .bottom) {
-        newTabButton
+        VStack(spacing: 0) {
+          if !manager.archivedTabs.isEmpty {
+            archivedButton
+          }
+          newTabButton
+        }
       }
 
       Divider()
 
       SpacesSwitcherView()
+    }
+    // The Archived sheet inherits the active space's `TabManager` from here.
+    .sheet(isPresented: $showingArchived) {
+      ArchivedView()
     }
   }
 
@@ -52,9 +66,33 @@ struct SidebarView: View {
     )
   }
 
+  /// Opens the Archived sheet, with a count badge so the sidebar shows how many tabs are tucked away.
+  private var archivedButton: some View {
+    Button {
+      showingArchived = true
+    } label: {
+      HStack {
+        Label("Archived", systemImage: "archivebox")
+        Spacer(minLength: 4)
+        // Count badge: a small pill so the sidebar shows how many tabs are tucked away.
+        Text("\(manager.archivedTabs.count)")
+          .font(.caption.monospacedDigit())
+          .foregroundStyle(.secondary)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 1)
+          .background(.quaternary, in: Capsule())
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .buttonStyle(.borderless)
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .help("Archived Tabs")
+  }
+
   private var newTabButton: some View {
     Button {
-      manager.newTab(url: homeURL)
+      manager.newTab(url: appSettings.homeURL)
     } label: {
       Label("New Tab", systemImage: "plus")
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -87,4 +125,5 @@ struct SidebarView: View {
     .environment(store)
     .environment(store.activeSpace?.tabManager)
     .environment(try! FavoritesStore(inMemory: true))
+    .environment(AppSettings())
 }

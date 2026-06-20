@@ -6,6 +6,13 @@ import BrowserCore
 /// delete. Tapping a row switches the active space, which swaps the visible tab set.
 struct SpacesSwitcherView: View {
   @Environment(SpaceStore.self) private var store
+  /// This window's local state — selecting a row switches *this* window's Space (or focuses the
+  /// window that already owns it).
+  @Environment(WindowState.self) private var windowState
+  /// Focuses an existing window (by its `WindowState.ID` value) when a Space is open elsewhere.
+  @Environment(\.openWindow) private var openWindow
+  /// Supplies the configurable home page for the "New Space" button.
+  @Environment(AppSettings.self) private var appSettings
 
   /// When non-nil, the rename alert is shown for this space; `renameText` holds the edited name.
   @State private var renamingSpaceID: Space.ID?
@@ -36,7 +43,9 @@ struct SpacesSwitcherView: View {
   // MARK: - Rows
 
   private func spaceRow(_ space: Space) -> some View {
-    let isActive = space.id == store.activeSpaceID
+    let isActive = space.id == windowState.activeSpaceID
+    // Shown in another window? (Claimed by some window that isn't this one.)
+    let elsewhere = store.windowDisplaying(space.id).map { $0 != windowState.id } ?? false
     let tint = SpaceColor.color(space.colorHex)
     return HStack(spacing: 8) {
       Image(systemName: space.icon)
@@ -51,6 +60,13 @@ struct SpacesSwitcherView: View {
         .fontWeight(isActive ? .semibold : .regular)
 
       Spacer(minLength: 0)
+
+      // Indicate spaces currently open in another window; tapping such a row focuses that window.
+      if elsewhere {
+        Image(systemName: "macwindow")
+          .font(.system(size: 10))
+          .foregroundStyle(.secondary)
+      }
     }
     .padding(.horizontal, 8)
     .padding(.vertical, 6)
@@ -59,9 +75,11 @@ struct SpacesSwitcherView: View {
         .fill(isActive ? tint.opacity(0.18) : Color.clear)
     )
     .contentShape(Rectangle())
-    .onTapGesture { store.switchTo(space.id) }
+    .onTapGesture {
+      windowState.switchTo(space.id, in: store) { openWindow(value: $0) }
+    }
     .contextMenu { contextMenu(for: space) }
-    .help(space.name)
+    .help(elsewhere ? "\(space.name) — open in another window" : space.name)
   }
 
   @ViewBuilder
@@ -107,7 +125,9 @@ struct SpacesSwitcherView: View {
 
   private var newSpaceButton: some View {
     Button {
-      store.newSpaceWithHome()
+      let space = store.newSpaceWithHome(appSettings.homeURL)
+      // Show the new Space in this window (claiming it), rather than only updating global state.
+      windowState.switchTo(space.id, in: store) { openWindow(value: $0) }
     } label: {
       Label("New Space", systemImage: "plus")
         .font(.callout)
@@ -130,7 +150,10 @@ struct SpacesSwitcherView: View {
 }
 
 #Preview {
-  SpacesSwitcherView()
-    .environment(SpaceStore())
+  let store = SpaceStore()
+  return SpacesSwitcherView()
+    .environment(store)
+    .environment(WindowState())
+    .environment(AppSettings())
     .frame(width: 240)
 }

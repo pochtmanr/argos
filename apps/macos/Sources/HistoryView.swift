@@ -7,6 +7,7 @@ import SwiftUI
 struct HistoryView: View {
   @Environment(HistoryStore.self) private var history
   @Environment(SpaceStore.self) private var store
+  @Environment(WindowState.self) private var windowState
   @Environment(HistoryWindowController.self) private var controller
 
   @State private var searchText = ""
@@ -70,9 +71,10 @@ struct HistoryView: View {
 
   // MARK: - Actions
 
-  /// Load the chosen page into the active tab and close the sheet (mirrors `CommandBarView.open`).
+  /// Load the chosen page into this window's active tab and close the sheet (mirrors
+  /// `CommandBarView.open`).
   private func open(_ url: URL) {
-    store.activeSpace?.tabManager.activeTab?.load(url)
+    windowState.activeSpace(in: store)?.tabManager.activeTab?.load(url)
     controller.dismiss()
   }
 

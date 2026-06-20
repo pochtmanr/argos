@@ -45,6 +45,13 @@ public final class WebTab: Identifiable {
   @ObservationIgnored
   public var onCommit: ((URL, String) -> Void)?
 
+  /// Called when a navigation turns into a file download (a response the engine can't render, or a
+  /// link with the `download` attribute). The app wires this to a `DownloadStore`, which takes over the
+  /// `WKDownload`. Set by `TabManager` alongside `onCommit` so every tab reports through one path;
+  /// `@ObservationIgnored` because it's a sink, not observable state.
+  @ObservationIgnored
+  public var onDownloadStart: ((WKDownload) -> Void)?
+
   @ObservationIgnored
   private var navigationProxy: NavigationProxy!
   @ObservationIgnored
@@ -185,6 +192,8 @@ public final class WebTab: Identifiable {
       MainActor.assumeIsolated {
         guard let owner else { return }
         owner.isLoading = false
+        // Navigating counts as using the tab, so refresh recency to keep it out of the archive pass.
+        owner.markAccessed()
         // Committed navigation: report the settled URL/title for history recording.
         if let url = webView.url { owner.onCommit?(url, owner.title) }
       }
@@ -196,6 +205,39 @@ public final class WebTab: Identifiable {
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
       MainActor.assumeIsolated { owner?.isLoading = false }
+    }
+
+    // MARK: Downloads
+
+    /// A link the page asked to download (e.g. an `<a download>`): route it to the download path
+    /// instead of navigating. Everything else proceeds as a normal navigation.
+    func webView(
+      _ webView: WKWebView,
+      decidePolicyFor navigationAction: WKNavigationAction,
+      decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
+    ) {
+      decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
+    }
+
+    /// A response the engine can't render (e.g. a binary attachment) becomes a download; everything
+    /// renderable is allowed through.
+    func webView(
+      _ webView: WKWebView,
+      decidePolicyFor navigationResponse: WKNavigationResponse,
+      decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
+    ) {
+      decisionHandler(navigationResponse.canShowMIMEType ? .allow : .download)
+    }
+
+    /// WebKit hands us the `WKDownload` for a download that began from a navigation action; forward it
+    /// to the owning tab's sink so the app's `DownloadStore` can take it over.
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+      MainActor.assumeIsolated { owner?.onDownloadStart?(download) }
+    }
+
+    /// As above, for a download that began from an un-renderable navigation response.
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+      MainActor.assumeIsolated { owner?.onDownloadStart?(download) }
     }
   }
 }

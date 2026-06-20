@@ -5,85 +5,154 @@ import BrowserCore
 /// (plus the Spaces switcher) on the left and, on the right, the address `ToolbarView` above the
 /// active tab's web view.
 ///
-/// `SpaceStore` is the single source of truth. The active space's `TabManager` is injected into the
-/// environment so the tab `SidebarView`/`TabRow`/detail pane keep operating on a plain `TabManager`,
-/// unaware of spaces — switching spaces just swaps which manager they see.
+/// Shared app state (`SpaceStore` and its tabs, history/favorites/downloads, settings) is injected
+/// from the app. Per-window selection and presentation live in this window's `WindowState`: which
+/// Space it shows, the sidebar visibility, and its own command-bar/history/downloads controllers.
+/// The active space's `TabManager` is injected into the environment so the tab `SidebarView`/`TabRow`/
+/// detail pane keep operating on a plain `TabManager`, unaware of spaces.
+///
+/// Each window exclusively *claims* the Space it displays (see `WindowState`), so two windows never
+/// mount the same tab's single `WKWebView` — they always show different Spaces.
 struct BrowserWindowView: View {
   @Environment(SpaceStore.self) private var store
-  @Environment(CommandBarController.self) private var commandBar
-  @Environment(HistoryWindowController.self) private var historyController
+  @Environment(DownloadStore.self) private var downloadStore
+  @Environment(AppSettings.self) private var appSettings
 
-  /// Drives the sidebar show/hide toggle and keeps the window usable when collapsed.
-  @State private var columnVisibility = NavigationSplitViewVisibility.all
+  /// This window's local state, created once per window and keyed by the `WindowGroup` value.
+  @State private var windowState: WindowState
+
+  init(windowID: WindowState.ID) {
+    _windowState = State(initialValue: WindowState(id: windowID))
+  }
 
   var body: some View {
-    NavigationSplitView(columnVisibility: $columnVisibility) {
-      SidebarView()
-        .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
-    } detail: {
-      detailPane
-    }
-    // The ⌘L / ⌘T command bar floats centered over the whole window chrome when open.
-    .overlay {
-      if commandBar.isPresented {
-        CommandBarView()
+    @Bindable var windowState = windowState
+    return Group {
+      // Render the split view only once this window has claimed a Space. The sidebar and detail read
+      // the active Space's `TabManager` from the environment, so they must not evaluate before that
+      // manager exists — the claim lands in `.onAppear` below, which fires *after* the first body
+      // render. Until then this placeholder (which reads no `TabManager`) fills the window.
+      if let space = windowState.activeSpace(in: store) {
+        NavigationSplitView(columnVisibility: $windowState.columnVisibility) {
+          SidebarView()
+            // `ideal:` is the Settings-controlled default width. `NavigationSplitView` doesn't report a
+            // user's manual drag back to us, so this sets the opening/default width, not a live mirror.
+            .navigationSplitViewColumnWidth(min: 200, ideal: appSettings.sidebarIdealWidth, max: 360)
+        } detail: {
+          detailPane
+        }
+        // The ⌘L / ⌘T command bar floats centered over the whole window chrome when open.
+        .overlay {
+          if windowState.commandBar.isPresented {
+            CommandBarView()
+          }
+        }
+        // ⌘Y History sheet.
+        .sheet(isPresented: historyPresented) {
+          HistoryView()
+        }
+        .toolbar {
+          ToolbarItem(placement: .navigation) {
+            Button {
+              withAnimation {
+                windowState.columnVisibility = windowState.columnVisibility == .all ? .detailOnly : .all
+              }
+            } label: {
+              Image(systemName: "sidebar.left")
+            }
+            // The ⌥⌘S shortcut lives on the View ▸ Toggle Sidebar menu item (BrowserCommands); this is
+            // the toolbar twin, so it stays a plain click target to avoid a duplicate key binding.
+            .help("Toggle Sidebar")
+          }
+          ToolbarItem(placement: .primaryAction) {
+            Button {
+              windowState.downloads.toggle()
+            } label: {
+              // Filled (and tinted) while a download is active, so the icon doubles as the active indicator.
+              Image(systemName: hasActiveDownload ? "arrow.down.circle.fill" : "arrow.down.circle")
+                .symbolRenderingMode(hasActiveDownload ? .multicolor : .monochrome)
+            }
+            .help("Downloads")
+            .popover(isPresented: downloadsPresented, arrowEdge: .bottom) {
+              DownloadsPopoverView()
+            }
+          }
+        }
+        // Scope the tab views to this window's active space's manager. Non-nil here (we're inside the
+        // `if let`); re-injected when the active space changes so the sidebar/detail swap tab sets.
+        .environment(space.tabManager)
+      } else {
+        Color(nsColor: .windowBackgroundColor)
       }
-    }
-    // ⌘Y History sheet.
-    .sheet(isPresented: historyPresented) {
-      HistoryView()
     }
     .frame(minWidth: 900, minHeight: 600)
-    .toolbar {
-      ToolbarItem(placement: .navigation) {
-        Button {
-          withAnimation {
-            columnVisibility = columnVisibility == .all ? .detailOnly : .all
-          }
-        } label: {
-          Image(systemName: "sidebar.left")
-        }
-        // ⌥⌘S avoids clashing with the system Toggle-Sidebar item's ⌃⌘S.
-        .keyboardShortcut("s", modifiers: [.command, .option])
-        .help("Toggle Sidebar")
+    // Give this window its Arc-style chrome (transparent titlebar, full-height sidebar). Zero-size, so
+    // it only reaches the hosting `NSWindow`; each window configures itself.
+    .background(WindowConfigurator())
+    // Publish this window's state so the app menu's commands act on the focused window.
+    .focusedSceneValue(\.windowState, windowState)
+    // Inject the per-window controllers by type so child views (command bar, history, downloads) keep
+    // reading them from the environment but now get *this* window's instances, plus the window state
+    // itself for the Spaces switcher.
+    .environment(windowState)
+    .environment(windowState.commandBar)
+    .environment(windowState.history)
+    .environment(windowState.downloads)
+    // Claim a Space on first appear (first unclaimed, honoring the restore hint, else a new Space),
+    // and release the claim when the window closes so another window can reuse the Space.
+    .onAppear { windowState.claimInitialSpace(in: store, homeURL: appSettings.homeURL) }
+    .onDisappear { windowState.release(in: store) }
+    // Recover if this window's Space is deleted (possibly from another window): re-claim another one.
+    .onChange(of: store.spaces.map(\.id)) {
+      if windowState.activeSpace(in: store) == nil {
+        windowState.claimInitialSpace(in: store, homeURL: appSettings.homeURL)
       }
     }
-    // Scope the tab views to the active space's manager. Always non-nil given the never-empty
-    // invariant; re-injected when the active space changes so the sidebar/detail swap tab sets.
-    .environment(store.activeSpace?.tabManager)
     // Load a lazily-restored tab the first time it becomes active — on launch and on every space/tab
     // switch — and stamp it accessed (powers auto-archive, Prompt 11). `.task(id:)` re-runs whenever
     // the active (space, tab) pair changes.
     .task(id: activeTabKey) {
-      guard let tab = store.activeSpace?.tabManager.activeTab else { return }
+      guard let tab = windowState.activeSpace(in: store)?.tabManager.activeTab else { return }
       tab.markAccessed()
       tab.ensureLoaded()
     }
   }
 
-  /// Bridges the shared `HistoryWindowController` flag to `.sheet(isPresented:)` so Escape / the Done
-  /// button (which flip the flag) dismiss the sheet too.
+  /// Bridges this window's `HistoryWindowController` flag to `.sheet(isPresented:)` so Escape / the
+  /// Done button (which flip the flag) dismiss the sheet too.
   private var historyPresented: Binding<Bool> {
-    Binding(get: { historyController.isPresented },
-            set: { historyController.isPresented = $0 })
+    Binding(get: { windowState.history.isPresented },
+            set: { windowState.history.isPresented = $0 })
+  }
+
+  /// Bridges this window's `DownloadsController` flag to `.popover(isPresented:)` so ⌘⇧J / the toolbar
+  /// button / dismissing the popover all stay in sync.
+  private var downloadsPresented: Binding<Bool> {
+    Binding(get: { windowState.downloads.isPresented },
+            set: { windowState.downloads.isPresented = $0 })
+  }
+
+  /// Whether any download is currently running — drives the toolbar icon's active indicator.
+  private var hasActiveDownload: Bool {
+    downloadStore.items.contains { $0.state == .inProgress }
   }
 
   /// Identity of the active (space, tab) pair, so `.task(id:)` fires once per distinct activation.
   private var activeTabKey: String {
-    let space = store.activeSpaceID?.uuidString ?? "none"
-    let tab = store.activeSpace?.tabManager.activeTabID?.uuidString ?? "none"
+    let space = windowState.activeSpaceID?.uuidString ?? "none"
+    let tab = windowState.activeSpace(in: store)?.tabManager.activeTabID?.uuidString ?? "none"
     return "\(space):\(tab)"
   }
 
-  /// The detail pane: address toolbar atop the active space's active tab content. Every tab in the
-  /// active space stays mounted in a `ZStack`; only the active one is visible and interactive.
-  /// Keeping the `WKWebView`s alive (rather than swapping a single `WebView`) means switching tabs
-  /// never re-hosts or reloads a page. Only the active space's tabs are mounted; inactive spaces'
-  /// web views stay alive in memory but leave the hierarchy until that space is reselected, so
-  /// switching back is instant with page/scroll/history intact (no suspension this prompt).
+  /// The detail pane: address toolbar atop this window's active tab content. Every tab in the active
+  /// space stays mounted in a `ZStack`; only the active one is visible and interactive. Keeping the
+  /// `WKWebView`s alive (rather than swapping a single `WebView`) means switching tabs never re-hosts
+  /// or reloads a page. Only the active space's tabs are mounted; inactive spaces' web views stay
+  /// alive in memory but leave the hierarchy until that space is reselected, so switching back is
+  /// instant with page/scroll/history intact.
   @ViewBuilder
   private var detailPane: some View {
-    if let space = store.activeSpace, let tab = space.tabManager.activeTab {
+    if let space = windowState.activeSpace(in: store), let tab = space.tabManager.activeTab {
       VStack(spacing: 0) {
         // `.id(tab.id)` gives the toolbar fresh @State (address text/focus) when the active tab
         // identity changes — including across a space switch.
@@ -105,9 +174,10 @@ struct BrowserWindowView: View {
 }
 
 #Preview {
-  BrowserWindowView()
+  BrowserWindowView(windowID: WindowState.ID())
     .environment(SpaceStore())
-    .environment(CommandBarController())
     .environment(try! HistoryStore(inMemory: true))
-    .environment(HistoryWindowController())
+    .environment(try! DownloadStore(inMemory: true))
+    .environment(try! FavoritesStore(inMemory: true))
+    .environment(AppSettings())
 }

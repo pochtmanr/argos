@@ -37,6 +37,9 @@ public final class SessionAutosaver {
         _ = space.icon
         let manager = space.tabManager
         _ = manager.activeTabID
+        // Reading the archived list catches archive/restore/delete (value-type elements, so any
+        // mutation replaces the array and trips observation).
+        _ = manager.archivedTabs
         for tab in manager.tabs {
           _ = tab.url
           _ = tab.title

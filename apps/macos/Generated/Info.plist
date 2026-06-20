@@ -28,7 +28,7 @@
 		<false/>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
-	<string></string>
+	<string>Browser — a personal daily-driver browser.</string>
 	<key>NSMainNibFile</key>
 	<string></string>
 	<key>NSPrincipalClass</key>

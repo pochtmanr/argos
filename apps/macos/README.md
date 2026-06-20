@@ -6,6 +6,7 @@ Native macOS browser app (Swift + SwiftUI + WebKit), Arc-style. The reusable eng
 - **Minimum OS:** macOS 14 (Sonoma)
 - **Bundle id:** `com.iosbrowser.macos`
 - **Project generation:** [XcodeGen](https://github.com/yonyz/XcodeGen) (`project.yml`)
+- **Keyboard shortcuts:** see [SHORTCUTS.md](SHORTCUTS.md)
 
 ## Prerequisites
 

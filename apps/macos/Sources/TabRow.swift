@@ -8,7 +8,7 @@ struct TabRow: View {
   let tab: WebTab
 
   @Environment(TabManager.self) private var manager
-  @Environment(SpaceStore.self) private var store
+  @Environment(WindowState.self) private var windowState
   @Environment(FavoritesStore.self) private var favorites
   @State private var hovering = false
 
@@ -48,10 +48,10 @@ struct TabRow: View {
       manager.togglePin(tab.id)
     }
 
-    let isFavorite = tab.url.map { favorites.contains(url: $0, in: store.activeSpaceID) } ?? false
+    let isFavorite = tab.url.map { favorites.contains(url: $0, in: windowState.activeSpaceID) } ?? false
     Button(isFavorite ? "Remove from Favorites" : "Add to Favorites") {
       guard let url = tab.url else { return }
-      favorites.toggle(url: url, title: tab.title, spaceID: store.activeSpaceID)
+      favorites.toggle(url: url, title: tab.title, spaceID: windowState.activeSpaceID)
     }
     .disabled(tab.url == nil)
 
@@ -66,11 +66,11 @@ struct TabRow: View {
 #Preview {
   let store = SpaceStore()
   let manager = store.activeSpace!.tabManager
-  manager.activeTab?.load(homeURL)
+  manager.activeTab?.load(URL(string: "https://www.apple.com")!)
   return List {
     TabRow(tab: manager.activeTab!)
   }
   .environment(manager)
-  .environment(store)
+  .environment(WindowState())
   .environment(try! FavoritesStore(inMemory: true))
 }

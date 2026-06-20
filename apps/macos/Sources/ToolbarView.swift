@@ -10,7 +10,9 @@ struct ToolbarView: View {
   /// navigation methods, so no `@Bindable` is needed.
   let tab: WebTab
 
-  private let parser = URLBarParser()
+  /// Drives the URL-vs-search parser's search engine, so changing the engine in Settings takes effect
+  /// on the very next address-bar submit.
+  @Environment(AppSettings.self) private var appSettings
 
   /// The address field's editable text. Mirrors `tab.url` when unfocused; holds the user's typing
   /// while focused.
@@ -105,6 +107,7 @@ struct ToolbarView: View {
   private func commit() {
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
+    let parser = URLBarParser(searchTemplate: appSettings.searchTemplate)
     tab.load(parser.resolve(trimmed))
     addressFocused = false
   }

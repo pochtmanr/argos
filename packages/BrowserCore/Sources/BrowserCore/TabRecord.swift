@@ -22,6 +22,9 @@ public final class TabRecord {
   public var isPinned: Bool = false
   /// When this tab was last active (Prompt 11 auto-archive).
   public var lastAccessed: Date = Date.distantPast
+  /// Whether the auto-archive pass swept this tab out of the live list (Prompt 11). Archived records
+  /// restore as lightweight `ArchivedTab`s (no live `WKWebView`) rather than as open tabs.
+  public var isArchived: Bool = false
   /// Owning space (inverse of `SpaceRecord.tabs`); the persisted space membership.
   public var space: SpaceRecord?
 
@@ -31,7 +34,8 @@ public final class TabRecord {
     title: String,
     order: Int,
     isPinned: Bool = false,
-    lastAccessed: Date = .distantPast
+    lastAccessed: Date = .distantPast,
+    isArchived: Bool = false
   ) {
     self.id = id
     self.url = url
@@ -39,5 +43,6 @@ public final class TabRecord {
     self.order = order
     self.isPinned = isPinned
     self.lastAccessed = lastAccessed
+    self.isArchived = isArchived
   }
 }

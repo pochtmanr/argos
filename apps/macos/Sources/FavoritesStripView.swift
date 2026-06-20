@@ -5,14 +5,15 @@ import BrowserCore
 /// favorite is an icon button: click opens it in a new tab, the context menu removes it, and items
 /// drag to reorder. Hidden entirely when the Space has no favorites so the sidebar stays clean.
 ///
-/// Reads `SpaceStore` for the active Space id (the sidebar is otherwise Space-unaware) and the active
-/// `TabManager` to open the chosen favorite.
+/// Reads this window's `WindowState` for the active Space id (the sidebar is otherwise Space-unaware)
+/// and the active `TabManager` to open the chosen favorite. Per-window, so two windows showing
+/// different Spaces each show their own Space's favorites.
 struct FavoritesStripView: View {
-  @Environment(SpaceStore.self) private var store
+  @Environment(WindowState.self) private var windowState
   @Environment(FavoritesStore.self) private var favorites
   @Environment(TabManager.self) private var manager
 
-  private var items: [Favorite] { favorites.all(spaceID: store.activeSpaceID) }
+  private var items: [Favorite] { favorites.all(spaceID: windowState.activeSpaceID) }
 
   var body: some View {
     if !items.isEmpty {
@@ -60,7 +61,7 @@ struct FavoritesStripView: View {
           from != to else { return false }
     // `move(from:to:)` uses remove-then-insert; adjust when dragging downward so the item lands
     // before the target (same convention as the tab list's `.onMove`).
-    favorites.move(from: from, to: from < to ? to - 1 : to, in: store.activeSpaceID)
+    favorites.move(from: from, to: from < to ? to - 1 : to, in: windowState.activeSpaceID)
     return true
   }
 }

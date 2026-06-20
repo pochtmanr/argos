@@ -7,16 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		108DA80EA553E1C904635A35 /* BrowserCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D5C254AF01A397901D4FE6 /* BrowserCommands.swift */; };
 		153AE9891CBA98E029C380F6 /* BrowserWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9965A1115670D122AE5954 /* BrowserWindowView.swift */; };
 		1B7AD01A2172C657ED7073C6 /* SpaceColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B708A87C7E8481C52039EE08 /* SpaceColor.swift */; };
 		20EEDF31C04DC7682F4AC02B /* CommandBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45E8723FBD21A95F60AD201 /* CommandBarController.swift */; };
 		3190A0636E9A7A102E04EA68 /* MacBrowserApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */; };
 		4090B84CF8DCC45ED3148C69 /* SpacesSwitcherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD4858BCCE83EC421A583833 /* SpacesSwitcherView.swift */; };
+		40F3100FACDB0510E6275BCB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F960DB93B8C5FC7B279AFE51 /* Assets.xcassets */; };
+		47417F6BC994D5FEFA7FDDBC /* FocusedValues+WindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1853863584241AAE23987837 /* FocusedValues+WindowState.swift */; };
+		51AF48B13B9B21E51F011943 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C62B0B04B2D7D1EB3EA6CBE /* SettingsView.swift */; };
+		57046767EE135E6DAAAE5AA8 /* ArchivedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FBE0D524EBD2C195D96CEE3 /* ArchivedView.swift */; };
+		5B56054A94CFAD985BE170EE /* WindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FE922FD9EBBDF4CD196CA0 /* WindowState.swift */; };
 		64B809C4E33C875E1D30847F /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4601988191B80D31F913D27 /* SidebarView.swift */; };
 		7CE05BD7C49A1AACF55B227B /* HistoryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2DE490301658C234E5DAF6 /* HistoryWindowController.swift */; };
 		8321005F1EBB5974827429CC /* TabRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C3BB85EC00E2379B7E5FCB /* TabRow.swift */; };
+		A09FB2C1A128E6E23033F427 /* WindowConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FAB2E5524898483B33C179B /* WindowConfigurator.swift */; };
 		D10C168DC1C45A71EAAE18DE /* FavoritesStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59FFDAA20F0F0F001E90C2C1 /* FavoritesStripView.swift */; };
 		D5901EEFE8BFCC2DBDBD38B2 /* BrowserCore in Frameworks */ = {isa = PBXBuildFile; productRef = DA9E6A28B685B4EB034F1C6E /* BrowserCore */; };
+		D7EE6382F55215835496B5A0 /* DownloadsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C4AAA50EAAEE9A5C1B3285 /* DownloadsController.swift */; };
+		D86B5B8FC42A6D2EFA171929 /* DownloadsPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAAA614B27D8583BFBCA44D0 /* DownloadsPopoverView.swift */; };
 		E92B8186DCEB812D472C129E /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FFA7D36D5B3400C273D4ED9 /* ToolbarView.swift */; };
 		EA7D358888D2D336A483EF70 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3738DCB7AA9FECE072615E7C /* HistoryView.swift */; };
 		EC8D394205853AA355D52179 /* CommandBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA5D8836BC9C699B976075AD /* CommandBarView.swift */; };
@@ -24,19 +33,28 @@
 
 /* Begin PBXFileReference section */
 		0FA3F8B1060315FE4A2A1416 /* BrowserCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BrowserCore; path = ../../packages/BrowserCore; sourceTree = SOURCE_ROOT; };
+		1853863584241AAE23987837 /* FocusedValues+WindowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FocusedValues+WindowState.swift"; sourceTree = "<group>"; };
 		1FFA7D36D5B3400C273D4ED9 /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
+		2FAB2E5524898483B33C179B /* WindowConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowConfigurator.swift; sourceTree = "<group>"; };
 		3738DCB7AA9FECE072615E7C /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		40D5C254AF01A397901D4FE6 /* BrowserCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserCommands.swift; sourceTree = "<group>"; };
 		59FFDAA20F0F0F001E90C2C1 /* FavoritesStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStripView.swift; sourceTree = "<group>"; };
 		5A2DE490301658C234E5DAF6 /* HistoryWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindowController.swift; sourceTree = "<group>"; };
+		6FBE0D524EBD2C195D96CEE3 /* ArchivedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchivedView.swift; sourceTree = "<group>"; };
+		92FE922FD9EBBDF4CD196CA0 /* WindowState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowState.swift; sourceTree = "<group>"; };
 		9B66BACE20761F76E4636EB9 /* MacBrowser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacBrowser.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9C62B0B04B2D7D1EB3EA6CBE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A45E8723FBD21A95F60AD201 /* CommandBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandBarController.swift; sourceTree = "<group>"; };
 		B708A87C7E8481C52039EE08 /* SpaceColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceColor.swift; sourceTree = "<group>"; };
 		BA5D8836BC9C699B976075AD /* CommandBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandBarView.swift; sourceTree = "<group>"; };
+		BAAA614B27D8583BFBCA44D0 /* DownloadsPopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsPopoverView.swift; sourceTree = "<group>"; };
 		BD4858BCCE83EC421A583833 /* SpacesSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesSwitcherView.swift; sourceTree = "<group>"; };
 		C6C3BB85EC00E2379B7E5FCB /* TabRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabRow.swift; sourceTree = "<group>"; };
 		C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacBrowserApp.swift; sourceTree = "<group>"; };
+		C8C4AAA50EAAEE9A5C1B3285 /* DownloadsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsController.swift; sourceTree = "<group>"; };
 		CA9965A1115670D122AE5954 /* BrowserWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWindowView.swift; sourceTree = "<group>"; };
 		E4601988191B80D31F913D27 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		F960DB93B8C5FC7B279AFE51 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,10 +77,19 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		5D490C8426A26B9979E65213 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F960DB93B8C5FC7B279AFE51 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		64848664E552CB34BA6BDB3F = {
 			isa = PBXGroup;
 			children = (
 				4F31F54EBA8843388A949D25 /* Packages */,
+				5D490C8426A26B9979E65213 /* Resources */,
 				BD193D32E798C6AFB72CE23A /* Sources */,
 				BF67A4399F75C6659D549BD0 /* Products */,
 			);
@@ -71,18 +98,26 @@
 		BD193D32E798C6AFB72CE23A /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				6FBE0D524EBD2C195D96CEE3 /* ArchivedView.swift */,
+				40D5C254AF01A397901D4FE6 /* BrowserCommands.swift */,
 				CA9965A1115670D122AE5954 /* BrowserWindowView.swift */,
 				A45E8723FBD21A95F60AD201 /* CommandBarController.swift */,
 				BA5D8836BC9C699B976075AD /* CommandBarView.swift */,
+				C8C4AAA50EAAEE9A5C1B3285 /* DownloadsController.swift */,
+				BAAA614B27D8583BFBCA44D0 /* DownloadsPopoverView.swift */,
 				59FFDAA20F0F0F001E90C2C1 /* FavoritesStripView.swift */,
+				1853863584241AAE23987837 /* FocusedValues+WindowState.swift */,
 				3738DCB7AA9FECE072615E7C /* HistoryView.swift */,
 				5A2DE490301658C234E5DAF6 /* HistoryWindowController.swift */,
 				C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */,
+				9C62B0B04B2D7D1EB3EA6CBE /* SettingsView.swift */,
 				E4601988191B80D31F913D27 /* SidebarView.swift */,
 				B708A87C7E8481C52039EE08 /* SpaceColor.swift */,
 				BD4858BCCE83EC421A583833 /* SpacesSwitcherView.swift */,
 				C6C3BB85EC00E2379B7E5FCB /* TabRow.swift */,
 				1FFA7D36D5B3400C273D4ED9 /* ToolbarView.swift */,
+				2FAB2E5524898483B33C179B /* WindowConfigurator.swift */,
+				92FE922FD9EBBDF4CD196CA0 /* WindowState.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -103,6 +138,7 @@
 			buildConfigurationList = A96687642B81D2E5E7A5413D /* Build configuration list for PBXNativeTarget "MacBrowser" */;
 			buildPhases = (
 				37D478E95D01097086FC3DB0 /* Sources */,
+				6369C0F1F5E6C1096B7B9E73 /* Resources */,
 				7E016FA1DDD9D59498A2BEC7 /* Frameworks */,
 			);
 			buildRules = (
@@ -150,23 +186,42 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		6369C0F1F5E6C1096B7B9E73 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				40F3100FACDB0510E6275BCB /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		37D478E95D01097086FC3DB0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				57046767EE135E6DAAAE5AA8 /* ArchivedView.swift in Sources */,
+				108DA80EA553E1C904635A35 /* BrowserCommands.swift in Sources */,
 				153AE9891CBA98E029C380F6 /* BrowserWindowView.swift in Sources */,
 				20EEDF31C04DC7682F4AC02B /* CommandBarController.swift in Sources */,
 				EC8D394205853AA355D52179 /* CommandBarView.swift in Sources */,
+				D7EE6382F55215835496B5A0 /* DownloadsController.swift in Sources */,
+				D86B5B8FC42A6D2EFA171929 /* DownloadsPopoverView.swift in Sources */,
 				D10C168DC1C45A71EAAE18DE /* FavoritesStripView.swift in Sources */,
+				47417F6BC994D5FEFA7FDDBC /* FocusedValues+WindowState.swift in Sources */,
 				EA7D358888D2D336A483EF70 /* HistoryView.swift in Sources */,
 				7CE05BD7C49A1AACF55B227B /* HistoryWindowController.swift in Sources */,
 				3190A0636E9A7A102E04EA68 /* MacBrowserApp.swift in Sources */,
+				51AF48B13B9B21E51F011943 /* SettingsView.swift in Sources */,
 				64B809C4E33C875E1D30847F /* SidebarView.swift in Sources */,
 				1B7AD01A2172C657ED7073C6 /* SpaceColor.swift in Sources */,
 				4090B84CF8DCC45ED3148C69 /* SpacesSwitcherView.swift in Sources */,
 				8321005F1EBB5974827429CC /* TabRow.swift in Sources */,
 				E92B8186DCEB812D472C129E /* ToolbarView.swift in Sources */,
+				A09FB2C1A128E6E23033F427 /* WindowConfigurator.swift in Sources */,
+				5B56054A94CFAD985BE170EE /* WindowState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -226,7 +281,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -301,7 +356,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.0.1;
+				MARKETING_VERSION = 1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

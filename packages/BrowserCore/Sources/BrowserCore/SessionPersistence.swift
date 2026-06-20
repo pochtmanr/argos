@@ -14,7 +14,7 @@ import SwiftData
 public final class SessionPersistence {
   /// The models that make up the persisted schema, in one place so the container and any future
   /// `VersionedSchema`/`SchemaMigrationPlan` stay in sync.
-  public static let models: [any PersistentModel.Type] = [SpaceRecord.self, TabRecord.self, HistoryRecord.self, Favorite.self]
+  public static let models: [any PersistentModel.Type] = [SpaceRecord.self, TabRecord.self, HistoryRecord.self, Favorite.self, DownloadRecord.self]
 
   /// `UserDefaults` key for the top-level active-space pointer. SwiftData stores each space's active
   /// *tab* (`SpaceRecord.activeTabID`), but "which space is active" is a single app-level value, so
@@ -48,6 +48,14 @@ public final class SessionPersistence {
     FavoritesStore(modelContext: container.mainContext)
   }
 
+  /// Vends a `DownloadStore` backed by this same container, so the downloads log lives in the one
+  /// store file alongside spaces/tabs/history/favorites. Like history, downloads are independent of the
+  /// space↔tab graph: the store reads/writes its own `DownloadRecord` rows directly and is not part of
+  /// `save(_:)`/`load()`.
+  public func makeDownloadStore() -> DownloadStore {
+    DownloadStore(modelContext: container.mainContext)
+  }
+
   // MARK: - Restore
 
   /// Rebuilds a live `SpaceStore` from persisted records, or returns `nil` when the store is empty
@@ -59,10 +67,15 @@ public final class SessionPersistence {
 
     let spaces = records.map { record -> Space in
       let tabRecords = record.tabs.sorted { $0.order < $1.order }
-      // A space must always have at least one tab; reseed a blank one if a record somehow has none.
-      let webTabs: [WebTab] = tabRecords.isEmpty
+      // Archived tabs come back as lightweight records (no live web view), not open tabs.
+      let openRecords = tabRecords.filter { !$0.isArchived }
+      let archivedTabs = tabRecords
+        .filter(\.isArchived)
+        .map { ArchivedTab(id: $0.id, url: $0.url, title: $0.title, lastAccessed: $0.lastAccessed) }
+      // A space must always have at least one *open* tab; reseed a blank one if a record has none.
+      let webTabs: [WebTab] = openRecords.isEmpty
         ? [WebTab()]
-        : tabRecords.map { tab in
+        : openRecords.map { tab in
             WebTab(
               id: tab.id,
               url: tab.url,
@@ -72,7 +85,7 @@ public final class SessionPersistence {
               deferLoad: true
             )
           }
-      let tabManager = TabManager(tabs: webTabs, activeTabID: record.activeTabID)
+      let tabManager = TabManager(tabs: webTabs, activeTabID: record.activeTabID, archivedTabs: archivedTabs)
       return Space(
         id: record.id,
         name: record.name,
@@ -126,12 +139,14 @@ public final class SessionPersistence {
     try? context.save()
   }
 
-  /// Upserts a space's tabs into its `SpaceRecord`, writing display order and deleting dropped tabs.
+  /// Upserts a space's open *and* archived tabs into its `SpaceRecord`, writing display order and the
+  /// `isArchived` flag, and deleting records whose live counterparts (open or archived) are gone.
   private func reconcileTabs(of manager: TabManager, into record: SpaceRecord) {
     var tabByID = Dictionary(record.tabs.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
-    let liveTabIDs = Set(manager.tabs.map(\.id))
-    for tab in record.tabs where !liveTabIDs.contains(tab.id) {
+    // An id still present in either the open or the archived list must be kept; everything else dropped.
+    let keepIDs = Set(manager.tabs.map(\.id)).union(manager.archivedTabs.map(\.id))
+    for tab in record.tabs where !keepIDs.contains(tab.id) {
       context.delete(tab)
       tabByID[tab.id] = nil
     }
@@ -143,10 +158,31 @@ public final class SessionPersistence {
         existing.order = tabIndex
         existing.isPinned = tab.isPinned
         existing.lastAccessed = tab.lastAccessed
+        existing.isArchived = false
       } else {
         let new = TabRecord(
           id: tab.id, url: tab.url, title: tab.title, order: tabIndex,
           isPinned: tab.isPinned, lastAccessed: tab.lastAccessed
+        )
+        new.space = record
+        context.insert(new)
+      }
+    }
+
+    // Archived tabs persist as `isArchived` records (no live web view to snapshot). Their `order` is
+    // their index within the archived list — only meaningful relative to other archived records.
+    for (archiveIndex, archived) in manager.archivedTabs.enumerated() {
+      if let existing = tabByID[archived.id] {
+        existing.url = archived.url
+        existing.title = archived.title
+        existing.order = archiveIndex
+        existing.isPinned = false
+        existing.lastAccessed = archived.lastAccessed
+        existing.isArchived = true
+      } else {
+        let new = TabRecord(
+          id: archived.id, url: archived.url, title: archived.title, order: archiveIndex,
+          isPinned: false, lastAccessed: archived.lastAccessed, isArchived: true
         )
         new.space = record
         context.insert(new)
