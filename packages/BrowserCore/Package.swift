@@ -9,6 +9,11 @@ let package = Package(
     .library(name: "BrowserCore", targets: ["BrowserCore"])
   ],
   targets: [
-    .target(name: "BrowserCore", path: "Sources/BrowserCore")
+    .target(name: "BrowserCore", path: "Sources/BrowserCore"),
+    .testTarget(
+      name: "BrowserCoreTests",
+      dependencies: ["BrowserCore"],
+      path: "Tests/BrowserCoreTests"
+    )
   ]
 )
