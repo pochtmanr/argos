@@ -1,0 +1,30 @@
+{
+  "x-generated-path": "/Users/roman/Developer/iosbrowser/tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@browser/api-contracts": ["packages/api-contracts/src/index.ts"],
+      "@browser/ai-core": ["packages/ai-core/src/index.ts"],
+      "@browser/observability": ["packages/observability/src/index.ts"],
+      "@browser/profile-engine": ["packages/profile-engine/src/index.ts"],
+      "@browser/proxy-engine": ["packages/proxy-engine/src/index.ts"],
+      "@browser/security": ["packages/security/src/index.ts"],
+      "@browser/sync-engine": ["packages/sync-engine/src/index.ts"],
+      "@browser/vault": ["packages/vault/src/index.ts"]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# /Users/roman/Developer/iosbrowser/pnpm-workspace.yaml
+packages:
+  - "apps/*"
+  - "packages/*"

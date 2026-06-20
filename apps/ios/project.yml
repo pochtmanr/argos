@@ -1,0 +1,27 @@
+# /Users/roman/Developer/iosbrowser/apps/ios/project.yml
+name: IOSBrowser
+options:
+  bundleIdPrefix: com.example.aibrowser
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    SWIFT_VERSION: "6.0"
+targets:
+  IOSBrowser:
+    type: application
+    platform: iOS
+    sources:
+      - Sources/IOSBrowserApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.aibrowser.ios
+        INFOPLIST_KEY_CFBundleDisplayName: AI Browser
+        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsArbitraryLoads: false
+    info:
+      path: Generated/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight

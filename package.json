@@ -1,0 +1,25 @@
+{
+  "x-generated-path": "/Users/roman/Developer/iosbrowser/package.json",
+  "name": "ai-native-browser-platform",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @browser/desktop dev",
+    "dev:backend": "pnpm --filter @browser/backend dev",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "db:migrate": "supabase migration up",
+    "docker:up": "docker compose -f docker/docker-compose.yml up --build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,17 @@
+# /Users/roman/Developer/iosbrowser/.gitignore
+node_modules
+.pnpm-store
+dist
+.turbo
+.vite
+.env
+.env.*
+!.env.example
+DerivedData
+.build
+*.xcuserstate
+*.xcodeproj/project.xcworkspace/xcuserdata
+*.xcworkspace/xcuserdata
+docker/volumes
+coverage
+*.log

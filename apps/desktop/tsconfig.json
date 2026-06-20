@@ -1,0 +1,10 @@
+{
+  "x-generated-path": "/Users/roman/Developer/iosbrowser/apps/desktop/tsconfig.json",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}
