@@ -39,6 +39,21 @@ struct BrowserWindowView: View {
     // Scope the tab views to the active space's manager. Always non-nil given the never-empty
     // invariant; re-injected when the active space changes so the sidebar/detail swap tab sets.
     .environment(store.activeSpace?.tabManager)
+    // Load a lazily-restored tab the first time it becomes active — on launch and on every space/tab
+    // switch — and stamp it accessed (powers auto-archive, Prompt 11). `.task(id:)` re-runs whenever
+    // the active (space, tab) pair changes.
+    .task(id: activeTabKey) {
+      guard let tab = store.activeSpace?.tabManager.activeTab else { return }
+      tab.markAccessed()
+      tab.ensureLoaded()
+    }
+  }
+
+  /// Identity of the active (space, tab) pair, so `.task(id:)` fires once per distinct activation.
+  private var activeTabKey: String {
+    let space = store.activeSpaceID?.uuidString ?? "none"
+    let tab = store.activeSpace?.tabManager.activeTabID?.uuidString ?? "none"
+    return "\(space):\(tab)"
   }
 
   /// The detail pane: address toolbar atop the active space's active tab content. Every tab in the

@@ -11,9 +11,10 @@ import WebKit
 @MainActor
 public final class WebTab: Identifiable {
   /// Stable identity for the lifetime of the tab. `@ObservationIgnored` because it never changes,
-  /// so it is not observable state — like `webView` below.
+  /// so it is not observable state — like `webView` below. Assigned in `init` so a restored tab can
+  /// keep the id it was persisted under (and stay matchable to `TabManager.activeTabID`).
   @ObservationIgnored
-  public let id = UUID()
+  public let id: UUID
 
   /// The current page URL, kept in sync via KVO.
   public private(set) var url: URL?
@@ -28,6 +29,11 @@ public final class WebTab: Identifiable {
   /// Whether the forward list is non-empty.
   public private(set) var canGoForward: Bool = false
 
+  /// Whether the user pinned this tab. Persisted now to power pinned tabs (Prompt 09); no UI yet.
+  public var isPinned: Bool
+  /// When this tab was last made active. Persisted now to power auto-archive (Prompt 11); no UI yet.
+  public var lastAccessed: Date
+
   /// The underlying web view. Exposed so a representable can host it directly.
   /// `@ObservationIgnored` because the view itself is not observable state.
   @ObservationIgnored
@@ -38,7 +44,31 @@ public final class WebTab: Identifiable {
   @ObservationIgnored
   private var observations: [NSKeyValueObservation] = []
 
-  public init(configuration: WKWebViewConfiguration? = nil) {
+  /// A saved URL waiting to be loaded on first activation (lazy restore). `nil` once loaded or for a
+  /// tab that loads eagerly.
+  @ObservationIgnored
+  private var pendingURL: URL?
+
+  /// Creates a tab.
+  ///
+  /// Normal use needs no arguments (`WebTab()`), seeding a blank tab the app then loads into. The
+  /// remaining parameters exist for **session restore**: pass the persisted `id`, `url`, `title`,
+  /// `isPinned`, and `lastAccessed` to recreate a tab as it was. With `deferLoad: true` the saved
+  /// `url`/`title` are shown immediately but the page is not fetched until ``ensureLoaded()`` — the
+  /// app calls that when the tab first becomes active, so inactive tabs don't all load at launch.
+  public init(
+    id: UUID = UUID(),
+    url: URL? = nil,
+    title: String = "",
+    isPinned: Bool = false,
+    lastAccessed: Date = Date(),
+    deferLoad: Bool = false,
+    configuration: WKWebViewConfiguration? = nil
+  ) {
+    self.id = id
+    self.isPinned = isPinned
+    self.lastAccessed = lastAccessed
+
     let configuration = configuration ?? WKWebViewConfiguration()
     configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
     self.webView = WKWebView(frame: .zero, configuration: configuration)
@@ -46,13 +76,26 @@ public final class WebTab: Identifiable {
     self.navigationProxy = NavigationProxy(owner: self)
     self.webView.navigationDelegate = navigationProxy
 
-    // Seed initial values, then keep them in sync via type-safe KVO closures.
+    // Seed initial values from the (empty) web view, then keep them in sync via type-safe KVO closures.
     self.url = webView.url
     self.title = webView.title ?? ""
     self.estimatedProgress = webView.estimatedProgress
     self.canGoBack = webView.canGoBack
     self.canGoForward = webView.canGoForward
     registerObservers()
+
+    // Restore path: show the saved url/title right away. Assigning *after* `registerObservers()`
+    // overrides the `.initial` KVO callbacks that fired (with the empty web view's nil/"" values)
+    // during registration, so the placeholder survives until a real navigation updates it.
+    if let url {
+      self.url = url
+      self.title = title
+      if deferLoad {
+        self.pendingURL = url
+      } else {
+        load(url)
+      }
+    }
   }
 
   deinit {
@@ -86,6 +129,20 @@ public final class WebTab: Identifiable {
 
   public func load(_ url: URL) {
     webView.load(URLRequest(url: url))
+  }
+
+  /// Loads the lazily-deferred restore URL once, if any. Safe to call repeatedly: it does nothing
+  /// after the first load (or for a tab that wasn't restored with `deferLoad`).
+  public func ensureLoaded() {
+    guard let pendingURL else { return }
+    self.pendingURL = nil
+    load(pendingURL)
+  }
+
+  /// Stamps this tab as just used. Call when the tab becomes active so `lastAccessed` reflects real
+  /// usage (powers auto-archive in Prompt 11).
+  public func markAccessed() {
+    lastAccessed = Date()
   }
 
   public func goBack() {

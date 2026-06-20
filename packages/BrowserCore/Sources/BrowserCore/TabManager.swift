@@ -27,6 +27,15 @@ public final class TabManager {
     self.activeTabID = first.id
   }
 
+  /// Rebuilds a manager from restored tabs (session restore). `tabs` must be non-empty to uphold the
+  /// "always at least one tab" invariant; `activeTabID` falls back to the first tab if it doesn't
+  /// match any tab. The caller (persistence layer) supplies tabs in display order.
+  public init(tabs: [WebTab], activeTabID: WebTab.ID?) {
+    precondition(!tabs.isEmpty, "TabManager requires at least one tab")
+    self.tabs = tabs
+    self.activeTabID = tabs.contains { $0.id == activeTabID } ? activeTabID : tabs[0].id
+  }
+
   /// Appends a fresh tab, makes it active, and loads `url` into it if provided.
   @discardableResult
   public func newTab(url: URL? = nil) -> WebTab {

@@ -31,6 +31,15 @@ public final class SpaceStore {
     self.activeSpaceID = first.id
   }
 
+  /// Rebuilds a store from restored spaces (session restore). `spaces` must be non-empty to uphold
+  /// the "always at least one space" invariant; `activeSpaceID` falls back to the first space if it
+  /// doesn't match any space. The caller (persistence layer) supplies spaces in display order.
+  public init(spaces: [Space], activeSpaceID: Space.ID?) {
+    precondition(!spaces.isEmpty, "SpaceStore requires at least one space")
+    self.spaces = spaces
+    self.activeSpaceID = spaces.contains { $0.id == activeSpaceID } ? activeSpaceID : spaces[0].id
+  }
+
   /// Appends a fresh space, makes it active, and returns it. The new space starts with its own
   /// seeded blank tab; the hosting app decides what to load into it.
   @discardableResult

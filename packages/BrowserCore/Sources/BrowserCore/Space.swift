@@ -12,8 +12,9 @@ import Observation
 @MainActor
 public final class Space: Identifiable {
   /// Stable identity for the lifetime of the space. `@ObservationIgnored` because it never changes.
+  /// Assigned in `init` so a restored space can keep the id it was persisted under.
   @ObservationIgnored
-  public let id = UUID()
+  public let id: UUID
 
   /// User-facing name, e.g. "Work".
   public var name: String
@@ -28,13 +29,16 @@ public final class Space: Identifiable {
   public let tabManager: TabManager
 
   /// Creates a space. `tabManager` defaults to a fresh `TabManager`, which seeds one blank tab, so
-  /// a new space is immediately usable.
+  /// a new space is immediately usable. `id` defaults to a fresh `UUID`; session restore passes the
+  /// persisted id so the space (and its `activeSpaceID` reference) survives relaunch.
   public init(
+    id: UUID = UUID(),
     name: String,
     colorHex: String,
     icon: String,
     tabManager: TabManager = TabManager()
   ) {
+    self.id = id
     self.name = name
     self.colorHex = colorHex
     self.icon = icon
