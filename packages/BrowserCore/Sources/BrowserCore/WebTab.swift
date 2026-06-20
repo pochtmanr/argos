@@ -9,7 +9,12 @@ import WebKit
 /// platform-agnostic so it can back both the macOS and iOS UIs.
 @Observable
 @MainActor
-public final class WebTab {
+public final class WebTab: Identifiable {
+  /// Stable identity for the lifetime of the tab. `@ObservationIgnored` because it never changes,
+  /// so it is not observable state — like `webView` below.
+  @ObservationIgnored
+  public let id = UUID()
+
   /// The current page URL, kept in sync via KVO.
   public private(set) var url: URL?
   /// The current page title, kept in sync via KVO.
