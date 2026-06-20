@@ -14,6 +14,10 @@ struct TabStripView: View {
   @Environment(SpaceStore.self) private var store
   @Environment(WindowState.self) private var windowState
 
+  /// The strip's fixed height. Exposed so the detail pane can offset the page's content inset by it
+  /// when the strip is shown (the page scrolls *under* the strip's glass).
+  static let height: CGFloat = 36
+
   /// Smallest an open (unpinned) tab shrinks to before the strip starts scrolling instead.
   private let minTabWidth: CGFloat = 90
   /// Fixed width of a pinned (compact, icon-only) chip.
@@ -53,7 +57,7 @@ struct TabStripView: View {
         .frame(minWidth: geo.size.width, alignment: .leading)
       }
     }
-    .frame(height: 36)
+    .frame(height: Self.height)
     .background(.bar)
     .overlay(alignment: .bottom) { Divider() }
   }

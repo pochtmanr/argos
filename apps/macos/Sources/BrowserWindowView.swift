@@ -1,5 +1,6 @@
 import SwiftUI
 import BrowserCore
+import WebKit
 
 /// The browser window's root chrome: a `NavigationSplitView` with the vertical tab `SidebarView`
 /// (plus the Spaces switcher) on the left and, on the right, the address `ToolbarView` above the
@@ -186,35 +187,93 @@ struct BrowserWindowView: View {
   /// instant with page/scroll/history intact.
   @ViewBuilder
   private var detailPane: some View {
-    if let space = windowState.activeSpace(in: store), let tab = space.tabManager.activeTab {
-      VStack(spacing: 0) {
-        // Tabs sit directly under the unified top toolbar (nav + address pill now live in the native
-        // title-bar toolbar, Safari-style).
-        TabStripView()
+    if let space = windowState.activeSpace(in: store), space.tabManager.activeTab != nil {
+      GeometryReader { proxy in
+        // Safari-style frosted chrome: the page draws full-height *under* the translucent title-bar
+        // toolbar and tab strip, so its content blurs through the glass as it scrolls. The page's
+        // top is kept clear of the chrome by a WebKit top content inset (see `applyTopContentInset`),
+        // sized to the chrome height: the toolbar's safe-area inset plus the strip when it's shown.
+        let stripHeight: CGFloat = space.tabManager.tabs.count > 1 ? TabStripView.height : 0
+        let topInset = proxy.safeAreaInsets.top + stripHeight
 
-        // Web view on the left; the proxy/AI inspector slides in on the right when open.
-        HStack(spacing: 0) {
-          ZStack {
-            ForEach(space.tabManager.tabs) { tab in
-              WebView(tab: tab)
-                .opacity(tab.id == space.tabManager.activeTabID ? 1 : 0)
-                .allowsHitTesting(tab.id == space.tabManager.activeTabID)
+        ZStack(alignment: .top) {
+          // Web view on the left; the proxy/AI inspector slides in on the right when open. The whole
+          // stack ignores the top safe area so the page extends up under the glass chrome.
+          HStack(spacing: 0) {
+            ZStack {
+              ForEach(space.tabManager.tabs) { tab in
+                WebView(tab: tab)
+                  .opacity(tab.id == space.tabManager.activeTabID ? 1 : 0)
+                  .allowsHitTesting(tab.id == space.tabManager.activeTabID)
+              }
+              // A blank active tab (no URL) is a new-tab page: cover its empty web view with the
+              // favorites start page. It isn't a scrolling web page, so keep it below the chrome.
+              if let active = space.tabManager.activeTab, active.url == nil {
+                StartPageView(tab: active)
+                  .padding(.top, topInset)
+              }
             }
-            // A blank active tab (no URL) is a new-tab page: cover its empty web view with the
-            // favorites start page. Loading a URL into the tab replaces this with the live page.
-            if let active = space.tabManager.activeTab, active.url == nil {
-              StartPageView(tab: active)
+            // Make the per-space web-view container identity explicit across space switches.
+            .id(space.id)
+
+            if windowState.rightPanel != nil {
+              Divider()
+              RightPanelView()
             }
           }
-          // Make the per-space web-view container identity explicit across space switches.
-          .id(space.id)
+          .ignoresSafeArea(.container, edges: .top)
 
-          if windowState.rightPanel != nil {
-            Divider()
-            RightPanelView()
+          // Translucent tab strip pinned at the top, over the page (which scrolls under its glass).
+          // Hidden while a single tab is open — the strip only earns its space with multiple tabs.
+          if space.tabManager.tabs.count > 1 {
+            TabStripView()
           }
         }
+        // Keep every mounted tab's page inset in sync as the chrome height changes (toolbar resize,
+        // strip appearing/disappearing) and as tabs are added.
+        .onChange(of: topInset, initial: true) {
+          applyTopContentInset(topInset, in: space)
+        }
+        .onChange(of: space.tabManager.tabs.map(\.id), initial: true) {
+          applyTopContentInset(topInset, in: space)
+        }
       }
+    }
+  }
+
+  /// Applies the top content inset to every mounted tab in `space`, so each page's top clears the
+  /// translucent chrome while still scrolling under it.
+  private func applyTopContentInset(_ inset: CGFloat, in space: Space) {
+    for tab in space.tabManager.tabs {
+      tab.webView.applyTopContentInset(inset)
+    }
+  }
+}
+
+/// WebKit's macOS content-inset SPI — the same mechanism Safari uses to let the page scroll under a
+/// translucent toolbar while keeping its top content clear. Declared as an `@objc` protocol so we can
+/// message it without a bridging header; every call is guarded by `responds(to:)`, so it cleanly
+/// no-ops on a WebKit build that lacks these selectors.
+@objc private protocol WKWebViewContentInsetSPI {
+  @objc(_setTopContentInset:)
+  func setTopContentInset(_ inset: CGFloat)
+  @objc(_setAutomaticallyAdjustsContentInsets:)
+  func setAutomaticallyAdjustsContentInsets(_ flag: Bool)
+}
+
+private extension WKWebView {
+  /// Pushes the page's content down by `inset` points (so its top clears the glass chrome) while the
+  /// page still scrolls *under* the chrome. Uses the WebKit macOS content-inset SPI; guarded so it is
+  /// a no-op if those selectors are unavailable.
+  func applyTopContentInset(_ inset: CGFloat) {
+    let target = self as AnyObject
+    let autoSel = #selector(WKWebViewContentInsetSPI.setAutomaticallyAdjustsContentInsets(_:))
+    if target.responds(to: autoSel) {
+      unsafeBitCast(target, to: WKWebViewContentInsetSPI.self).setAutomaticallyAdjustsContentInsets(false)
+    }
+    let insetSel = #selector(WKWebViewContentInsetSPI.setTopContentInset(_:))
+    if target.responds(to: insetSel) {
+      unsafeBitCast(target, to: WKWebViewContentInsetSPI.self).setTopContentInset(inset)
     }
   }
 }
