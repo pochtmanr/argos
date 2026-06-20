@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		153AE9891CBA98E029C380F6 /* BrowserWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9965A1115670D122AE5954 /* BrowserWindowView.swift */; };
 		3190A0636E9A7A102E04EA68 /* MacBrowserApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */; };
-		687C100779DB930527E1D406 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F8E4BB59AE5ACB02E4F405 /* ContentView.swift */; };
+		64B809C4E33C875E1D30847F /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4601988191B80D31F913D27 /* SidebarView.swift */; };
+		8321005F1EBB5974827429CC /* TabRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C3BB85EC00E2379B7E5FCB /* TabRow.swift */; };
 		D5901EEFE8BFCC2DBDBD38B2 /* BrowserCore in Frameworks */ = {isa = PBXBuildFile; productRef = DA9E6A28B685B4EB034F1C6E /* BrowserCore */; };
 		E92B8186DCEB812D472C129E /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FFA7D36D5B3400C273D4ED9 /* ToolbarView.swift */; };
 /* End PBXBuildFile section */
@@ -17,8 +19,10 @@
 		0FA3F8B1060315FE4A2A1416 /* BrowserCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BrowserCore; path = ../../packages/BrowserCore; sourceTree = SOURCE_ROOT; };
 		1FFA7D36D5B3400C273D4ED9 /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
 		9B66BACE20761F76E4636EB9 /* MacBrowser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacBrowser.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C6C3BB85EC00E2379B7E5FCB /* TabRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabRow.swift; sourceTree = "<group>"; };
 		C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacBrowserApp.swift; sourceTree = "<group>"; };
-		F4F8E4BB59AE5ACB02E4F405 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		CA9965A1115670D122AE5954 /* BrowserWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserWindowView.swift; sourceTree = "<group>"; };
+		E4601988191B80D31F913D27 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,8 +57,10 @@
 		BD193D32E798C6AFB72CE23A /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				F4F8E4BB59AE5ACB02E4F405 /* ContentView.swift */,
+				CA9965A1115670D122AE5954 /* BrowserWindowView.swift */,
 				C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */,
+				E4601988191B80D31F913D27 /* SidebarView.swift */,
+				C6C3BB85EC00E2379B7E5FCB /* TabRow.swift */,
 				1FFA7D36D5B3400C273D4ED9 /* ToolbarView.swift */,
 			);
 			path = Sources;
@@ -128,8 +134,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				687C100779DB930527E1D406 /* ContentView.swift in Sources */,
+				153AE9891CBA98E029C380F6 /* BrowserWindowView.swift in Sources */,
 				3190A0636E9A7A102E04EA68 /* MacBrowserApp.swift in Sources */,
+				64B809C4E33C875E1D30847F /* SidebarView.swift in Sources */,
+				8321005F1EBB5974827429CC /* TabRow.swift in Sources */,
 				E92B8186DCEB812D472C129E /* ToolbarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

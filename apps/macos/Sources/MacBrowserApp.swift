@@ -1,8 +1,8 @@
 import SwiftUI
 import BrowserCore
 
-/// The page a fresh tab opens. Shared by the menu commands and `ContentView` so they agree on what
-/// "new tab" means. `BrowserCore`'s `TabManager` stays URL-agnostic.
+/// The page a fresh tab opens. Shared by the menu commands and `BrowserWindowView` so they agree on
+/// what "new tab" means. `BrowserCore`'s `TabManager` stays URL-agnostic.
 let homeURL = URL(string: "https://www.apple.com")!
 
 @main
@@ -12,7 +12,7 @@ struct MacBrowserApp: App {
 
   var body: some Scene {
     WindowGroup {
-      ContentView()
+      BrowserWindowView()
         .environment(manager)
     }
     .commands {
