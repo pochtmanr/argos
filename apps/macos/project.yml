@@ -1,0 +1,38 @@
+# /Users/roman/Developer/iosbrowser/apps/macos/project.yml
+name: MacBrowser
+options:
+  bundleIdPrefix: com.iosbrowser
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.0.1"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  BrowserCore:
+    path: ../../packages/BrowserCore
+targets:
+  MacBrowser:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+    dependencies:
+      - package: BrowserCore
+        product: BrowserCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.iosbrowser.macos
+        GENERATE_INFOPLIST_FILE: false
+    info:
+      path: Generated/Info.plist
+      properties:
+        CFBundleDisplayName: Browser
+        CFBundleName: Browser
+        LSMinimumSystemVersion: "14.0"
+        NSHumanReadableCopyright: ""
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+        NSMainNibFile: ""
+        NSPrincipalClass: NSApplication
