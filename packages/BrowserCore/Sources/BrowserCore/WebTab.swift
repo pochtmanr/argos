@@ -39,6 +39,12 @@ public final class WebTab: Identifiable {
   @ObservationIgnored
   public let webView: WKWebView
 
+  /// Called on each *committed* navigation (load finished) with the page URL and title. The app wires
+  /// this to record browsing history; `@ObservationIgnored` because it's a sink, not observable state.
+  /// Set by `TabManager` so every tab (new, restored, or reseeded) reports through one path.
+  @ObservationIgnored
+  public var onCommit: ((URL, String) -> Void)?
+
   @ObservationIgnored
   private var navigationProxy: NavigationProxy!
   @ObservationIgnored
@@ -176,7 +182,12 @@ public final class WebTab: Identifiable {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-      MainActor.assumeIsolated { owner?.isLoading = false }
+      MainActor.assumeIsolated {
+        guard let owner else { return }
+        owner.isLoading = false
+        // Committed navigation: report the settled URL/title for history recording.
+        if let url = webView.url { owner.onCommit?(url, owner.title) }
+      }
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {

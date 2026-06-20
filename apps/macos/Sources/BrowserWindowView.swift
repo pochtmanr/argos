@@ -10,6 +10,8 @@ import BrowserCore
 /// unaware of spaces — switching spaces just swaps which manager they see.
 struct BrowserWindowView: View {
   @Environment(SpaceStore.self) private var store
+  @Environment(CommandBarController.self) private var commandBar
+  @Environment(HistoryWindowController.self) private var historyController
 
   /// Drives the sidebar show/hide toggle and keeps the window usable when collapsed.
   @State private var columnVisibility = NavigationSplitViewVisibility.all
@@ -20,6 +22,16 @@ struct BrowserWindowView: View {
         .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
     } detail: {
       detailPane
+    }
+    // The ⌘L / ⌘T command bar floats centered over the whole window chrome when open.
+    .overlay {
+      if commandBar.isPresented {
+        CommandBarView()
+      }
+    }
+    // ⌘Y History sheet.
+    .sheet(isPresented: historyPresented) {
+      HistoryView()
     }
     .frame(minWidth: 900, minHeight: 600)
     .toolbar {
@@ -47,6 +59,13 @@ struct BrowserWindowView: View {
       tab.markAccessed()
       tab.ensureLoaded()
     }
+  }
+
+  /// Bridges the shared `HistoryWindowController` flag to `.sheet(isPresented:)` so Escape / the Done
+  /// button (which flip the flag) dismiss the sheet too.
+  private var historyPresented: Binding<Bool> {
+    Binding(get: { historyController.isPresented },
+            set: { historyController.isPresented = $0 })
   }
 
   /// Identity of the active (space, tab) pair, so `.task(id:)` fires once per distinct activation.
@@ -88,4 +107,7 @@ struct BrowserWindowView: View {
 #Preview {
   BrowserWindowView()
     .environment(SpaceStore())
+    .environment(CommandBarController())
+    .environment(try! HistoryStore(inMemory: true))
+    .environment(HistoryWindowController())
 }

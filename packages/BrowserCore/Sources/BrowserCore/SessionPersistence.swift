@@ -14,7 +14,7 @@ import SwiftData
 public final class SessionPersistence {
   /// The models that make up the persisted schema, in one place so the container and any future
   /// `VersionedSchema`/`SchemaMigrationPlan` stay in sync.
-  public static let models: [any PersistentModel.Type] = [SpaceRecord.self, TabRecord.self]
+  public static let models: [any PersistentModel.Type] = [SpaceRecord.self, TabRecord.self, HistoryRecord.self, Favorite.self]
 
   /// `UserDefaults` key for the top-level active-space pointer. SwiftData stores each space's active
   /// *tab* (`SpaceRecord.activeTabID`), but "which space is active" is a single app-level value, so
@@ -32,6 +32,20 @@ public final class SessionPersistence {
     let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
     self.container = try ModelContainer(for: schema, configurations: configuration)
     self.defaults = defaults
+  }
+
+  /// Vends a `HistoryStore` backed by this same container, so browsing history lives in the one store
+  /// file alongside spaces/tabs. History is otherwise independent of the space↔tab graph: the store
+  /// reads/writes its own `HistoryRecord` rows directly and is not part of `save(_:)`/`load()`.
+  public func makeHistoryStore() -> HistoryStore {
+    HistoryStore(modelContext: container.mainContext)
+  }
+
+  /// Vends a `FavoritesStore` backed by this same container, so favorites live in the one store file
+  /// alongside spaces/tabs/history. Like history, favorites are independent of the space↔tab graph: the
+  /// store reads/writes its own `Favorite` rows directly and is not part of `save(_:)`/`load()`.
+  public func makeFavoritesStore() -> FavoritesStore {
+    FavoritesStore(modelContext: container.mainContext)
   }
 
   // MARK: - Restore
@@ -154,6 +168,11 @@ public final class SessionPersistence {
     }
     for tab in (try? context.fetch(FetchDescriptor<TabRecord>())) ?? [] {
       context.delete(tab)
+    }
+    // Favorites are keyed by space id; once every space is gone they'd be orphaned, so a fresh-run
+    // reset clears them too (unlike history, which is deliberately kept across resets).
+    for favorite in (try? context.fetch(FetchDescriptor<Favorite>())) ?? [] {
+      context.delete(favorite)
     }
     defaults.removeObject(forKey: Self.activeSpaceKey)
     try? context.save()

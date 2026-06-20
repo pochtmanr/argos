@@ -9,19 +9,29 @@
 /* Begin PBXBuildFile section */
 		153AE9891CBA98E029C380F6 /* BrowserWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9965A1115670D122AE5954 /* BrowserWindowView.swift */; };
 		1B7AD01A2172C657ED7073C6 /* SpaceColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B708A87C7E8481C52039EE08 /* SpaceColor.swift */; };
+		20EEDF31C04DC7682F4AC02B /* CommandBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A45E8723FBD21A95F60AD201 /* CommandBarController.swift */; };
 		3190A0636E9A7A102E04EA68 /* MacBrowserApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */; };
 		4090B84CF8DCC45ED3148C69 /* SpacesSwitcherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD4858BCCE83EC421A583833 /* SpacesSwitcherView.swift */; };
 		64B809C4E33C875E1D30847F /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4601988191B80D31F913D27 /* SidebarView.swift */; };
+		7CE05BD7C49A1AACF55B227B /* HistoryWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2DE490301658C234E5DAF6 /* HistoryWindowController.swift */; };
 		8321005F1EBB5974827429CC /* TabRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C3BB85EC00E2379B7E5FCB /* TabRow.swift */; };
+		D10C168DC1C45A71EAAE18DE /* FavoritesStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59FFDAA20F0F0F001E90C2C1 /* FavoritesStripView.swift */; };
 		D5901EEFE8BFCC2DBDBD38B2 /* BrowserCore in Frameworks */ = {isa = PBXBuildFile; productRef = DA9E6A28B685B4EB034F1C6E /* BrowserCore */; };
 		E92B8186DCEB812D472C129E /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FFA7D36D5B3400C273D4ED9 /* ToolbarView.swift */; };
+		EA7D358888D2D336A483EF70 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3738DCB7AA9FECE072615E7C /* HistoryView.swift */; };
+		EC8D394205853AA355D52179 /* CommandBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA5D8836BC9C699B976075AD /* CommandBarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0FA3F8B1060315FE4A2A1416 /* BrowserCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BrowserCore; path = ../../packages/BrowserCore; sourceTree = SOURCE_ROOT; };
 		1FFA7D36D5B3400C273D4ED9 /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
+		3738DCB7AA9FECE072615E7C /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		59FFDAA20F0F0F001E90C2C1 /* FavoritesStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStripView.swift; sourceTree = "<group>"; };
+		5A2DE490301658C234E5DAF6 /* HistoryWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryWindowController.swift; sourceTree = "<group>"; };
 		9B66BACE20761F76E4636EB9 /* MacBrowser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacBrowser.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A45E8723FBD21A95F60AD201 /* CommandBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandBarController.swift; sourceTree = "<group>"; };
 		B708A87C7E8481C52039EE08 /* SpaceColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceColor.swift; sourceTree = "<group>"; };
+		BA5D8836BC9C699B976075AD /* CommandBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandBarView.swift; sourceTree = "<group>"; };
 		BD4858BCCE83EC421A583833 /* SpacesSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesSwitcherView.swift; sourceTree = "<group>"; };
 		C6C3BB85EC00E2379B7E5FCB /* TabRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabRow.swift; sourceTree = "<group>"; };
 		C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacBrowserApp.swift; sourceTree = "<group>"; };
@@ -62,6 +72,11 @@
 			isa = PBXGroup;
 			children = (
 				CA9965A1115670D122AE5954 /* BrowserWindowView.swift */,
+				A45E8723FBD21A95F60AD201 /* CommandBarController.swift */,
+				BA5D8836BC9C699B976075AD /* CommandBarView.swift */,
+				59FFDAA20F0F0F001E90C2C1 /* FavoritesStripView.swift */,
+				3738DCB7AA9FECE072615E7C /* HistoryView.swift */,
+				5A2DE490301658C234E5DAF6 /* HistoryWindowController.swift */,
 				C7FA00419CE5DB4E9E6CFD66 /* MacBrowserApp.swift */,
 				E4601988191B80D31F913D27 /* SidebarView.swift */,
 				B708A87C7E8481C52039EE08 /* SpaceColor.swift */,
@@ -141,6 +156,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				153AE9891CBA98E029C380F6 /* BrowserWindowView.swift in Sources */,
+				20EEDF31C04DC7682F4AC02B /* CommandBarController.swift in Sources */,
+				EC8D394205853AA355D52179 /* CommandBarView.swift in Sources */,
+				D10C168DC1C45A71EAAE18DE /* FavoritesStripView.swift in Sources */,
+				EA7D358888D2D336A483EF70 /* HistoryView.swift in Sources */,
+				7CE05BD7C49A1AACF55B227B /* HistoryWindowController.swift in Sources */,
 				3190A0636E9A7A102E04EA68 /* MacBrowserApp.swift in Sources */,
 				64B809C4E33C875E1D30847F /* SidebarView.swift in Sources */,
 				1B7AD01A2172C657ED7073C6 /* SpaceColor.swift in Sources */,

@@ -20,6 +20,22 @@ public final class TabManager {
     return tabs.first { $0.id == activeTabID }
   }
 
+  /// Pinned tabs, in display order. The sidebar renders these in a sticky section above the rest, and
+  /// (when Prompt 11 auto-archive lands) the archive pass must skip them — `WebTab.isPinned` is that
+  /// exemption signal.
+  public var pinnedTabs: [WebTab] { tabs.filter(\.isPinned) }
+
+  /// The non-pinned tabs, in display order — the sidebar's main "Open" section.
+  public var unpinnedTabs: [WebTab] { tabs.filter { !$0.isPinned } }
+
+  /// Sink for committed navigations, fanned out to every tab's `onCommit`. The app sets this (via
+  /// `SpaceStore`) to record history; assigning it back-fills existing tabs, and `newTab`/`closeTab`
+  /// forward it to tabs they create. `@ObservationIgnored` because it's plumbing, not observable state.
+  @ObservationIgnored
+  public var historyRecorder: ((URL, String) -> Void)? {
+    didSet { for tab in tabs { tab.onCommit = historyRecorder } }
+  }
+
   /// Seeds exactly one blank tab and makes it active. The app loads its home page into it.
   public init() {
     let first = WebTab()
@@ -40,6 +56,7 @@ public final class TabManager {
   @discardableResult
   public func newTab(url: URL? = nil) -> WebTab {
     let tab = WebTab()
+    tab.onCommit = historyRecorder
     tabs.append(tab)
     activeTabID = tab.id
     if let url { tab.load(url) }
@@ -64,6 +81,7 @@ public final class TabManager {
 
     if tabs.isEmpty {
       let fresh = WebTab()
+      fresh.onCommit = historyRecorder
       tabs = [fresh]
       activeTabID = fresh.id
       return
@@ -81,6 +99,41 @@ public final class TabManager {
     guard tabs.indices.contains(from) else { return }
     let tab = tabs.remove(at: from)
     let destination = min(max(to, 0), tabs.count)
+    tabs.insert(tab, at: destination)
+  }
+
+  /// Toggles the pinned state of the tab with `id`. Pinning moves it into the sidebar's pinned section
+  /// (rendered via ``pinnedTabs``); the flag persists through `SessionPersistence`'s tab reconcile.
+  public func togglePin(_ id: WebTab.ID) {
+    guard let tab = tabs.first(where: { $0.id == id }) else { return }
+    tab.isPinned.toggle()
+  }
+
+  /// Reorders within the pinned section. `from`/`to` are indices into ``pinnedTabs`` (the SidebarView
+  /// `.onMove` already applies the insert-before→remove-then-insert adjustment); this maps them to the
+  /// backing `tabs` array, leaving the unpinned tabs in place.
+  public func movePinned(from: Int, to: Int) {
+    moveWithinGroup(pinned: true, from: from, to: to)
+  }
+
+  /// Reorders within the unpinned ("Open") section. See ``movePinned(from:to:)`` for the index mapping.
+  public func moveUnpinned(from: Int, to: Int) {
+    moveWithinGroup(pinned: false, from: from, to: to)
+  }
+
+  /// Moves a tab within one section (pinned or unpinned) by translating section-relative indices to
+  /// global `tabs` indices, so the other section's tabs keep their positions.
+  private func moveWithinGroup(pinned: Bool, from: Int, to: Int) {
+    let groupIndices = tabs.indices.filter { tabs[$0].isPinned == pinned }
+    guard groupIndices.indices.contains(from) else { return }
+
+    let tab = tabs.remove(at: groupIndices[from])
+    // Recompute the group against the shortened array; `to` indexes into that shortened group.
+    let remaining = tabs.indices.filter { tabs[$0].isPinned == pinned }
+    let clamped = min(max(to, 0), remaining.count)
+    let destination = clamped == remaining.count
+      ? (remaining.last.map { $0 + 1 } ?? tabs.count)
+      : remaining[clamped]
     tabs.insert(tab, at: destination)
   }
 

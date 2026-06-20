@@ -23,6 +23,15 @@ public final class SpaceStore {
     return spaces.first { $0.id == activeSpaceID }
   }
 
+  /// App-level sink for committed navigations (history recording). Set once at app root; it fans out
+  /// to every space's `TabManager` (which in turn fans out to its tabs), and `newSpace`/`deleteSpace`
+  /// forward it to spaces they create, so restored and newly-made tabs all report through one path.
+  /// `@ObservationIgnored` because it's plumbing, not observable state.
+  @ObservationIgnored
+  public var historyRecorder: ((URL, String) -> Void)? {
+    didSet { for space in spaces { space.tabManager.historyRecorder = historyRecorder } }
+  }
+
   /// Seeds exactly one default space and makes it active. Its `TabManager` seeds one blank tab, so
   /// the app is never empty on first run.
   public init() {
@@ -49,6 +58,7 @@ public final class SpaceStore {
     icon: String = SpaceStore.defaultIcon
   ) -> Space {
     let space = Space(name: name, colorHex: colorHex, icon: icon)
+    space.tabManager.historyRecorder = historyRecorder
     spaces.append(space)
     activeSpaceID = space.id
     return space
@@ -89,6 +99,7 @@ public final class SpaceStore {
 
     if spaces.isEmpty {
       let fresh = Self.makeDefaultSpace()
+      fresh.tabManager.historyRecorder = historyRecorder
       spaces = [fresh]
       activeSpaceID = fresh.id
       return

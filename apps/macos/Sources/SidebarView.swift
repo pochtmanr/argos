@@ -11,11 +11,26 @@ struct SidebarView: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      // Favorites strip sits above the tab list (shows only when the active Space has favorites).
+      FavoritesStripView()
+
       List(selection: selection) {
-        ForEach(manager.tabs) { tab in
-          TabRow(tab: tab)
+        // Pinned tabs render in a sticky section above the rest; only shown when some tab is pinned.
+        if !manager.pinnedTabs.isEmpty {
+          Section("Pinned") {
+            ForEach(manager.pinnedTabs) { tab in
+              TabRow(tab: tab)
+            }
+            .onMove(perform: movePinned)
+          }
         }
-        .onMove(perform: move)
+
+        Section {
+          ForEach(manager.unpinnedTabs) { tab in
+            TabRow(tab: tab)
+          }
+          .onMove(perform: moveUnpinned)
+        }
       }
       // Keep the "new tab" button pinned below the scrolling list.
       .safeAreaInset(edge: .bottom) {
@@ -50,14 +65,18 @@ struct SidebarView: View {
     .help("New Tab")
   }
 
-  /// `.onMove` reports the destination with SwiftUI's insert-before semantics, but
-  /// `TabManager.move(from:to:)` removes then inserts (the target is the final index in the shortened
-  /// array). Adjust when moving downward. Active selection follows the tab automatically because the
-  /// manager preserves `activeTabID` by identity.
-  private func move(from source: IndexSet, to destination: Int) {
+  /// `.onMove` reports the destination with SwiftUI's insert-before semantics, but the manager's move
+  /// removes then inserts (the target is the final index in the shortened array), so adjust when moving
+  /// downward. The indices are relative to the section (pinned vs unpinned); the manager maps them back
+  /// to the backing tab array. Active selection follows the tab automatically (preserved by identity).
+  private func movePinned(from source: IndexSet, to destination: Int) {
     guard let from = source.first else { return }
-    let to = destination > from ? destination - 1 : destination
-    manager.move(from: from, to: to)
+    manager.movePinned(from: from, to: destination > from ? destination - 1 : destination)
+  }
+
+  private func moveUnpinned(from source: IndexSet, to destination: Int) {
+    guard let from = source.first else { return }
+    manager.moveUnpinned(from: from, to: destination > from ? destination - 1 : destination)
   }
 }
 
@@ -67,4 +86,5 @@ struct SidebarView: View {
   return SidebarView()
     .environment(store)
     .environment(store.activeSpace?.tabManager)
+    .environment(try! FavoritesStore(inMemory: true))
 }

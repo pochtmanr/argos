@@ -8,6 +8,8 @@ struct TabRow: View {
   let tab: WebTab
 
   @Environment(TabManager.self) private var manager
+  @Environment(SpaceStore.self) private var store
+  @Environment(FavoritesStore.self) private var favorites
   @State private var hovering = false
 
   var body: some View {
@@ -37,13 +39,38 @@ struct TabRow: View {
     // Make the whole row hit-testable so taps anywhere select it (List handles the selection).
     .contentShape(Rectangle())
     .onHover { hovering = $0 }
+    .contextMenu { contextMenu }
+  }
+
+  @ViewBuilder
+  private var contextMenu: some View {
+    Button(tab.isPinned ? "Unpin Tab" : "Pin Tab") {
+      manager.togglePin(tab.id)
+    }
+
+    let isFavorite = tab.url.map { favorites.contains(url: $0, in: store.activeSpaceID) } ?? false
+    Button(isFavorite ? "Remove from Favorites" : "Add to Favorites") {
+      guard let url = tab.url else { return }
+      favorites.toggle(url: url, title: tab.title, spaceID: store.activeSpaceID)
+    }
+    .disabled(tab.url == nil)
+
+    Divider()
+
+    Button("Close Tab", role: .destructive) {
+      manager.closeTab(tab.id)
+    }
   }
 }
 
 #Preview {
-  let manager = TabManager()
+  let store = SpaceStore()
+  let manager = store.activeSpace!.tabManager
+  manager.activeTab?.load(homeURL)
   return List {
-    TabRow(tab: manager.newTab(url: homeURL))
+    TabRow(tab: manager.activeTab!)
   }
   .environment(manager)
+  .environment(store)
+  .environment(try! FavoritesStore(inMemory: true))
 }
